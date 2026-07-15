@@ -1,20 +1,24 @@
 const allowedOrigins = [
   "http://localhost:6000",
-  "http://localhost:6000",
-  "https://your-production-domain.com",
-];
+  "http://localhost:3000",
+  "http://localhost:5173",
+].filter(Boolean);
 
 const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl, etc.)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS"));
+  origin(origin, callback) {
+    // Allow requests without an Origin header, including Postman and curl.
+    if (!origin) {
+      return callback(null, true);
     }
+
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error("Request blocked by CORS policy."));
   },
-  credentials: true, // if you need to allow cookies
+
+  credentials: true,
 };
 
 module.exports = corsOptions;

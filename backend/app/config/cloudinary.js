@@ -1,12 +1,10 @@
 const cloudinary = require("cloudinary").v2;
 
-require("dotenv").config();
-
-//cloudinary configuration
+// Configure the Cloudinary SDK using application environment credentials.
 cloudinary.config({
-  cloud_name: process.env.ClOUDINARY_CLOUD_NAME,
-  api_key: process.env.ClOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET, // Click 'View API Keys' above to copy your API secret
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
 module.exports = cloudinary;

@@ -4,71 +4,84 @@ const express = require("express");
 
 const path = require("path");
 
-const app = express();
-
 const cors = require("cors");
 
 const morgan = require("morgan");
 
 const helmet = require("helmet");
 
-const session = require("express-session");
-
 const cookieParser = require("cookie-parser");
 
-const rateLimit = require("./app/utils/limiter");
+const DatabaseConnection = require("./app/config/db");
 
 const corsOptions = require("./app/utils/corsOrigin");
 
-//database connection
-const DatabaseConnection = require("./app/config/dbconn");
+const { globalLimiter } = require("./app/utils/limiter");
 
+const authRoutes = require("./app/routes/api/authRoutes");
+
+const app = express();
+
+// Establish the MongoDB database connection.
 DatabaseConnection();
 
-app.use(cors(corsOptions));
-
-app.use(morgan("dev"));
-
+// Apply HTTP security headers.
 app.use(
   helmet({
     contentSecurityPolicy: false,
-    xDownloadOptions: false,
   }),
 );
 
-//static files
-app.use(express.static(path.join(__dirname, "public")));
-app.use("uploads", express.static(path.join(__dirname, "/uploads")));
-app.use("/uploads", express.static("uploads"));
+// Configure cross-origin resource sharing.
+app.use(cors(corsOptions));
 
-//define json
+// Apply global request rate limiting.
+app.use(globalLimiter);
+
+// Log HTTP requests in the development environment.
+if (process.env.NODE_ENV === "development") {
+  app.use(morgan("dev"));
+}
+
+// Parse JSON and URL-encoded request bodies.
 app.use(express.json());
 
-// Parse form data
-app.use(express.urlencoded({ extended: true }));
-
-// session & cookie storage
-app.use(cookieParser());
-
-// Apply the rate limiting middleware to all requests.
-app.use(rateLimit);
-
 app.use(
-  session({
-    secret: "keyboardcat",
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      maxAge: 1000 * 60 * 60 * 24, // 24 hours
-    },
+  express.urlencoded({
+    extended: true,
   }),
 );
 
-//define routes
-//app.use(require('./app/routes/index'));
+// Parse cookies attached to incoming requests.
+app.use(cookieParser());
 
-const port = 6000;
+// Serve application static assets.
+app.use(express.static(path.join(__dirname, "public")));
 
-app.listen(port, () => {
-  console.log("server is running on port", port);
+// Serve locally uploaded files.
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+// Default Route
+app.get("/", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Event booking API Running Successfully",
+  });
+});
+
+// Register backend authentication routes.
+app.use("/api/v1/auth", authRoutes);
+
+// Handle requests made to undefined application routes.
+app.use((req, res) => {
+  return res.status(404).json({
+    success: false,
+    message: `Route not found: ${req.method} ${req.originalUrl}`,
+  });
+});
+
+const PORT = process.env.PORT || 6000;
+
+app.listen(PORT, () => {
+  console.log(`Server is running on http://localhost:${PORT}`);
 });

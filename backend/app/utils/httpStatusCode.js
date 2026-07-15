@@ -1,14 +1,16 @@
-const StatusCode = {
+const HttpStatusCode = Object.freeze({
   SUCCESS: 200,
+  CREATED: 201,
+  NO_CONTENT: 204,
   BAD_REQUEST: 400,
   UNAUTHORIZED: 401,
   FORBIDDEN: 403,
   NOT_FOUND: 404,
+  CONFLICT: 409,
+  TOO_MANY_REQUESTS: 429,
   SERVER_ERROR: 500,
-  CREATED: 201,
-  NO_CONTENT: 204,
   BAD_GATEWAY: 502,
   SERVICE_UNAVAILABLE: 503,
-};
+});
 
-module.exports = StatusCode;
+module.exports = HttpStatusCode;

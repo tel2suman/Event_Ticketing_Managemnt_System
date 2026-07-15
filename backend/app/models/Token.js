@@ -1,26 +1,37 @@
 const mongoose = require("mongoose");
 
-// Defining Schema
-const tokenSchema = new mongoose.Schema({
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
-    required: true,
+const tokenSchema = new mongoose.Schema(
+  {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true,
+    },
+
+    token: {
+      type: String,
+      required: true,
+    },
+
+    type: {
+      type: String,
+      enum: ["email_verification", "password_reset"],
+      required: true,
+    },
+
+    expiresAt: {
+      type: Date,
+      required: true,
+      index: {
+        expires: 0,
+      },
+    },
   },
-
-  token: {
-    type: String,
-    required: true,
+  {
+    timestamps: true,
+    versionKey: false,
   },
+);
 
-  createdAt: {
-    type: Date,
-    default: Date.now,
-    expires: 3600, // 1 hour
-  },
-});
-
-// Model
-const TokenModel = mongoose.model("Token", tokenSchema);
-
-module.exports = TokenModel;
+module.exports = mongoose.model("Token", tokenSchema);
