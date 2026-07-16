@@ -1,25 +1,14 @@
 require("dotenv").config();
-
 const express = require("express");
-
 const path = require("path");
-
 const cors = require("cors");
-
 const morgan = require("morgan");
-
 const helmet = require("helmet");
-
 const cookieParser = require("cookie-parser");
-
 const DatabaseConnection = require("./app/config/db");
-
 const corsOptions = require("./app/utils/corsOrigin");
-
 const { globalLimiter } = require("./app/utils/limiter");
-
 const authRoutes = require("./app/routes/api/authRoutes");
-
 const app = express();
 
 // Establish the MongoDB database connection.
@@ -80,7 +69,7 @@ app.use((req, res) => {
   });
 });
 
-const PORT = process.env.PORT || 6000;
+const PORT = process.env.PORT || 5050;
 
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);

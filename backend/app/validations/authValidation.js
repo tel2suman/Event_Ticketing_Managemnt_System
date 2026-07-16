@@ -3,17 +3,20 @@ const Joi = require("joi");
 const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{9,}$/;
 
 const registerValidation = Joi.object({
+  // name validation
   name: Joi.string().trim().min(3).max(32).required().messages({
     "string.empty": "Name is required.",
     "string.min": "Name must contain at least 3 characters.",
     "string.max": "Name cannot exceed 32 characters.",
   }),
 
+  // email validation
   email: Joi.string().trim().lowercase().email().required().messages({
     "string.empty": "Email is required.",
     "string.email": "Please provide a valid email address.",
   }),
 
+  // password validation
   password: Joi.string().pattern(passwordPattern).required().messages({
     "string.empty": "Password is required.",
     "string.pattern.base":
@@ -21,6 +24,7 @@ const registerValidation = Joi.object({
   }),
 });
 
+// login validation
 const loginValidation = Joi.object({
   email: Joi.string().trim().lowercase().email().required().messages({
     "string.empty": "Email is required.",
@@ -32,6 +36,7 @@ const loginValidation = Joi.object({
   }),
 });
 
+// forgotPassword validation
 const forgotPasswordValidation = Joi.object({
   email: Joi.string().trim().lowercase().email().required().messages({
     "string.empty": "Email is required.",
@@ -39,6 +44,7 @@ const forgotPasswordValidation = Joi.object({
   }),
 });
 
+// resetPassword validation
 const resetPasswordValidation = Joi.object({
   password: Joi.string().pattern(passwordPattern).required().messages({
     "string.empty": "Password is required.",

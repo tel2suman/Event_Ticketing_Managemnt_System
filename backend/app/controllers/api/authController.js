@@ -23,7 +23,7 @@ class AuthController {
       }
 
       // Hash the account password before persisting the user record.
-      const hashedPassword = await bcrypt.hash(password, 12);
+      const hashedPassword = await bcrypt.hash(password, 10);
 
       const user = await User.create({
         name,
@@ -36,7 +36,7 @@ class AuthController {
       const verificationToken = crypto.randomBytes(32).toString("hex");
 
       // Hash the verification token before storing it in the database.
-      const hashedVerificationToken = await bcrypt.hash(verificationToken, 12);
+      const hashedVerificationToken = await bcrypt.hash(verificationToken, 10);
 
       await Token.create({
         userId: user._id,
@@ -74,6 +74,7 @@ class AuthController {
     }
   }
 
+  // email-verification
   async verifyEmail(req, res) {
     try {
       const { token, id } = req.query;
@@ -231,7 +232,7 @@ class AuthController {
     }
   }
 
-  //   refreshToken
+  // refreshToken
   async refreshToken(req, res) {
     try {
       const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
@@ -276,7 +277,7 @@ class AuthController {
       const newRefreshToken = GenerateToken.refreshToken(user);
 
       // Replace the previous refresh token hash during token rotation.
-      user.refreshToken = await bcrypt.hash(newRefreshToken, 12);
+      user.refreshToken = await bcrypt.hash(newRefreshToken, 10);
 
       await user.save();
 
@@ -310,7 +311,7 @@ class AuthController {
     }
   }
 
-  //   forgotPassword
+  // forgotPassword
   async forgotPassword(req, res) {
     try {
       const { email } = req.body;
@@ -369,7 +370,7 @@ class AuthController {
     }
   }
 
-  //   resetPassword
+  // resetPassword
   async resetPassword(req, res) {
     try {
       const { token, id } = req.query;
@@ -451,10 +452,10 @@ class AuthController {
     }
   }
 
-  //   logout
+  // logout
   async logout(req, res) {
     try {
-      const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
+      const refreshToken = req.cookies?.refreshToken;
 
       if (refreshToken) {
         try {
@@ -480,12 +481,14 @@ class AuthController {
             }
           }
         } catch (error) {
-          // Cookie cleanup continues when the refresh token is invalid.
+          console.error(
+            "Refresh token validation during logout:",
+            error.message,
+          );
         }
       }
 
       res.clearCookie("accessToken");
-
       res.clearCookie("refreshToken");
 
       return res.status(HttpStatusCode.SUCCESS).json({

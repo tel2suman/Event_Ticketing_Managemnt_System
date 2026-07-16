@@ -1,13 +1,8 @@
 require("dotenv").config();
-
 const bcrypt = require("bcryptjs");
-
 const mongoose = require("mongoose");
-
 const DatabaseConnection = require("./app/config/db");
-
 const User = require("./app/models/User");
-
 const SeedAdmin = async () => {
   try {
     await DatabaseConnection();
