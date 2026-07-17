@@ -235,7 +235,7 @@ class AuthController {
   // refreshToken
   async refreshToken(req, res) {
     try {
-      const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
+      const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
 
       if (!refreshToken) {
         return res.status(HttpStatusCode.UNAUTHORIZED).json({
@@ -448,6 +448,68 @@ class AuthController {
       return res.status(HttpStatusCode.SERVER_ERROR).json({
         success: false,
         message: "Unable to reset password.",
+      });
+    }
+  }
+
+  // changePassword
+  async changePassword(req, res) {
+    try {
+      const { oldPassword, newPassword } = req.body;
+
+      const user = await User.findById(req.user._id).select(
+        "+password +refreshToken",
+      );
+
+      if (!user) {
+        return res.status(HttpStatusCode.NOT_FOUND).json({
+          success: false,
+          message: "User account not found.",
+        });
+      }
+
+      const isOldPasswordValid = await bcrypt.compare(
+        oldPassword,
+        user.password,
+      );
+
+      if (!isOldPasswordValid) {
+        return res.status(HttpStatusCode.UNAUTHORIZED).json({
+          success: false,
+          message: "Current password is incorrect.",
+        });
+      }
+
+      const isSamePassword = await bcrypt.compare(newPassword, user.password);
+
+      if (isSamePassword) {
+        return res.status(HttpStatusCode.BAD_REQUEST).json({
+          success: false,
+          message: "New password must be different from the current password.",
+        });
+      }
+
+      user.password = await bcrypt.hash(newPassword, 12);
+
+      // Force the user to sign in again after changing the password.
+      user.refreshToken = null;
+
+      await user.save();
+
+      res.clearCookie("accessToken");
+
+      res.clearCookie("refreshToken");
+
+      return res.status(HttpStatusCode.SUCCESS).json({
+        success: true,
+        message: "Password changed successfully. Please sign in again.",
+      });
+    } catch (error) {
+      console.error("Change password error:", error);
+
+      return res.status(HttpStatusCode.SERVER_ERROR).json({
+        success: false,
+        message: "Unable to change password.",
       });
     }
   }

@@ -53,9 +53,25 @@ const resetPasswordValidation = Joi.object({
   }),
 });
 
+// changePassword validation
+const changePasswordValidation = Joi.object({
+  oldPassword: Joi.string().required().messages({
+    "string.empty": "Current password is required.",
+    "any.required": "Current password is required.",
+  }),
+
+  newPassword: Joi.string().pattern(passwordPattern).required().messages({
+    "string.empty": "New password is required.",
+    "string.pattern.base":
+      "Password must contain at least 9 characters, one uppercase letter, one lowercase letter, and one special character.",
+    "any.required": "New password is required.",
+  }),
+});
+
 module.exports = {
   registerValidation,
   loginValidation,
   forgotPasswordValidation,
   resetPasswordValidation,
+  changePasswordValidation,
 };
