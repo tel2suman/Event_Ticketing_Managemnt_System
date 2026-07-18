@@ -1,6 +1,6 @@
 const allowedOrigins = [
-  "http://localhost:6000",
-  "http://localhost:3000",
+  "http://localhost:5050",
+  "http://localhost:3009",
   "http://localhost:5173",
 ].filter(Boolean);
 

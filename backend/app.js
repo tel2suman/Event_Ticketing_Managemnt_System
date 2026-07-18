@@ -8,7 +8,6 @@ const cookieParser = require("cookie-parser");
 const DatabaseConnection = require("./app/config/db");
 const corsOptions = require("./app/utils/corsOrigin");
 const { globalLimiter } = require("./app/utils/limiter");
-const authRoutes = require("./app/routes/api/authRoutes");
 const app = express();
 
 // Establish the MongoDB database connection.
@@ -59,7 +58,7 @@ app.get("/", (req, res) => {
 });
 
 // Register backend authentication routes.
-app.use("/api/v1/auth", authRoutes);
+app.use(require("./app/routes/api/index"));
 
 // Handle requests made to undefined application routes.
 app.use((req, res) => {
