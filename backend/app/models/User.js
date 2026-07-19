@@ -34,7 +34,10 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
     refreshToken: {
       type: String,
       default: null,
