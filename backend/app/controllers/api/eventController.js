@@ -1,26 +1,55 @@
-const fs = require("fs");
 const Event = require("../../models/Event");
+const Category = require("../../models/Category")
 const Notification = require("../../models/Notification");
-const cloudinary = require("../../config/cloudinary");
+const {uploadToCloudinary, deleteFromCloudinary} = require("../../utils/ImageUplod");
 const HttpStatusCode = require("../../utils/httpStatusCode");
-
+const mongoose = require("mongoose");
 class EventController {
-
   // create event
   async createEvent(req, res) {
-    try {
-      const { title, description, location, date, time, organizer, status } =
-        req.body;
 
-      if (!title || !description || !location || !date || !time || !organizer) {
+    let imageResult = null;
+
+    try {
+      const {
+        title,
+        description,
+        location,
+        date,
+        time,
+        organizer,
+        categoryId,
+        status,
+      } = req.body;
+
+      if (
+        !title ||
+        !description ||
+        !location ||
+        !date ||
+        !time ||
+        !organizer ||
+        !categoryId
+      ) {
         return res.status(HttpStatusCode.BAD_REQUEST).json({
           success: false,
           message: "All fields are required",
         });
       }
 
+      // Check category exists
+      const category = await Category.findById(categoryId);
+
+      if (!category) {
+        return res.status(HttpStatusCode.NOT_FOUND).json({
+          success: false,
+          message: "Category not found",
+        });
+      }
+
       const existingEvent = await Event.findOne({
         title: title.trim(),
+        categoryId,
       });
 
       if (existingEvent) {
@@ -38,16 +67,7 @@ class EventController {
       }
 
       // Upload image to Cloudinary
-      const imageResult = await cloudinary.uploader.upload(req.file.path, {
-        folder: "uploads",
-        width: 1200,
-        height: 600,
-        crop: "limit",
-        quality: "auto",
-      });
-
-      // Remove temporary file
-      await fs.promises.unlink(req.file.path);
+      imageResult = await uploadToCloudinary(req.file.path);
 
       const event = await Event.create({
         title: title.trim(),
@@ -56,6 +76,7 @@ class EventController {
         date,
         time,
         organizer,
+        categoryId,
         banner: imageResult.secure_url,
         cloudinary_id: imageResult.public_id,
         status: status || "active",
@@ -81,12 +102,7 @@ class EventController {
 
       // Cleanup Cloudinary image if DB insertion fails
       if (imageResult?.public_id) {
-        await cloudinary.uploader.destroy(imageResult.public_id);
-      }
-
-      // Cleanup local file if upload fails before unlink
-      if (req.file?.path && fs.existsSync(req.file.path)) {
-        await fs.promises.unlink(req.file.path);
+        await deleteFromCloudinary(imageResult.public_id);
       }
 
       return res.status(HttpStatusCode.SERVER_ERROR).json({
@@ -126,20 +142,201 @@ class EventController {
     }
   }
 
-  // get all events
-  async getAllEvents(req, res) {
-    try {
-      const events = await Event.find()
-        .populate("createdBy", "name email")
-        .sort({ createdAt: -1 });
+  // get events by category
+  async getEventsByCategory(req, res) {
 
-      return res.status(HttpStatusCode.SUCCESS).json({
+    try {
+
+      const { categoryId } = req.params;
+
+      // Validate ObjectId
+      if (!categoryId) {
+        return res.status(HttpStatusCode.NOT_FOUND).json({
+          success: false,
+          message: "Category Id not found",
+        });
+      }
+
+      const events = await Event.aggregate([
+        // Filter events by category
+        {
+          $match: {
+            categoryId: new mongoose.Types.ObjectId(categoryId),
+            status: "active",
+          },
+        },
+
+        // Join Category
+        {
+          $lookup: {
+            from: "categories",
+            localField: "categoryId",
+            foreignField: "_id",
+            as: "category",
+          },
+        },
+
+        // Convert category array to object
+        {
+          $unwind: {
+            path: "$category",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+
+        // Join User
+        {
+          $lookup: {
+            from: "users",
+            localField: "createdBy",
+            foreignField: "_id",
+            as: "createdBy",
+          },
+        },
+
+        // Convert createdBy array to object
+        {
+          $unwind: {
+            path: "$createdBy",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+
+        // Select fields
+        {
+          $project: {
+            title: 1,
+            description: 1,
+            location: 1,
+            date: 1,
+            time: 1,
+            organizer: 1,
+            banner: 1,
+            status: 1,
+            createdAt: 1,
+            updatedAt: 1,
+            categoryId: 1,
+
+            category: {
+              _id: "$category._id",
+              categoryName: "$category.categoryName",
+            },
+
+            createdBy: {
+              _id: "$createdBy._id",
+              name: "$createdBy.name",
+              email: "$createdBy.email",
+            },
+          },
+        },
+
+        // Upcoming events first
+        {
+          $sort: {
+            date: 1,
+          },
+        },
+      ]);
+
+      return res.status(HttpStatusCode.OK).json({
         success: true,
-        message: "All Events Details Fetched Successfully!",
         count: events.length,
         data: events,
       });
     } catch (error) {
+      console.error("Get Events By Category Error:", error);
+
+      return res.status(HttpStatusCode.SERVER_ERROR).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  // get all events
+  async getAllEvents(req, res) {
+    try {
+      const events = await Event.aggregate([
+        // Join Category
+        {
+          $lookup: {
+            from: "categories",
+            localField: "categoryId",
+            foreignField: "_id",
+            as: "category",
+          },
+        },
+
+        // Convert category array to object
+        {
+          $unwind: {
+            path: "$category",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+
+        // Join User
+        {
+          $lookup: {
+            from: "users",
+            localField: "createdBy",
+            foreignField: "_id",
+            as: "createdBy",
+          },
+        },
+
+        // Convert createdBy array to object
+        {
+          $unwind: {
+            path: "$createdBy",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+
+        // Select required fields
+        {
+          $project: {
+            title: 1,
+            description: 1,
+            location: 1,
+            date: 1,
+            time: 1,
+            organizer: 1,
+            banner: 1,
+            status: 1,
+            createdAt: 1,
+            updatedAt: 1,
+            categoryId: 1,
+
+            category: {
+              _id: "$category._id",
+              categoryName: "$category.categoryName",
+            },
+
+            createdBy: {
+              _id: "$createdBy._id",
+              name: "$createdBy.name",
+              email: "$createdBy.email",
+            },
+          },
+        },
+
+        // Latest events first
+        {
+          $sort: {
+            createdAt: -1,
+          },
+        },
+      ]);
+
+      return res.status(HttpStatusCode.SUCCESS).json({
+        success: true,
+        count: events.length,
+        data: events,
+      });
+    } catch (error) {
+      console.error("Get All Events Error:", error);
+
       return res.status(HttpStatusCode.SERVER_ERROR).json({
         success: false,
         message: error.message,
@@ -149,6 +346,9 @@ class EventController {
 
   //update event
   async updateEvent(req, res) {
+
+    let imageResult = null;
+
     try {
       const { id } = req.params;
 
@@ -162,25 +362,20 @@ class EventController {
       }
 
       if (req.file) {
+        // Upload new image first
+        imageResult = await uploadToCloudinary(req.file.path);
+
         // Delete old Cloudinary image
         if (event.cloudinary_id) {
-          await cloudinary.uploader.destroy(event.cloudinary_id);
+          await deleteFromCloudinary(event.cloudinary_id);
         }
 
-        // Upload new image
-        const imageResult = await cloudinary.uploader.upload(req.file.path, {
-          folder: "uploads",
-          width: 500,
-          height: 500,
-          crop: "limit",
-          quality: "auto",
-        });
-
+        // Update new image details
         event.banner = imageResult.secure_url;
         event.cloudinary_id = imageResult.public_id;
-
-        await fs.promises.unlink(req.file.path);
       }
+
+      // Update event fields
 
       event.title = req.body.title || event.title;
       event.description = req.body.description || event.description;
@@ -188,6 +383,7 @@ class EventController {
       event.date = req.body.date || event.date;
       event.time = req.body.time || event.time;
       event.organizer = req.body.organizer || event.organizer;
+      event.categoryId = req.body.categoryId || event.categoryId;
       event.status = req.body.status || event.status;
 
       await event.save();
@@ -206,6 +402,16 @@ class EventController {
         data: event,
       });
     } catch (error) {
+      console.error("Update Event Error:", error);
+      // Cleanup newly uploaded image
+      // if database update fails
+      if (imageResult?.public_id) {
+        try {
+          await deleteFromCloudinary(imageResult.public_id);
+        } catch (cleanupError) {
+          console.error("Cloudinary cleanup failed:", cleanupError);
+        }
+      }
       return res.status(HttpStatusCode.SERVER_ERROR).json({
         success: false,
         message: error.message,
@@ -215,9 +421,7 @@ class EventController {
 
   // delete event
   async deleteEvent(req, res) {
-
     try {
-
       const { id } = req.params;
 
       const event = await Event.findById(id);
@@ -231,16 +435,16 @@ class EventController {
 
       // Delete Cloudinary image
       if (event.cloudinary_id) {
-        await cloudinary.uploader.destroy(event.cloudinary_id);
+        await deleteFromCloudinary(event.cloudinary_id);
       }
 
-        await Notification.create({
-          title: "Event Deleted",
-          message: `${event.title} has been deleted successfully.`,
-          type: "event_deleted",
-          eventId: event._id,
-          createdBy: req.user._id,
-        });
+      await Notification.create({
+        title: "Event Deleted",
+        message: `${event.title} has been deleted successfully.`,
+        type: "event_deleted",
+        eventId: event._id,
+        createdBy: req.user._id,
+      });
 
       await Event.findByIdAndDelete(id);
 
@@ -258,20 +462,84 @@ class EventController {
 
   // Get All Notifications
   async getNotifications(req, res) {
-
     try {
-      const notifications = await Notification.find()
-        .populate("createdBy", "name email")
-        .populate("eventId", "title")
-        .sort({ createdAt: -1 });
+      const notifications = await Notification.aggregate([
+        // Join User collection
+        {
+          $lookup: {
+            from: "users",
+            localField: "createdBy",
+            foreignField: "_id",
+            as: "createdBy",
+          },
+        },
+
+        // Convert createdBy array to object
+        {
+          $unwind: {
+            path: "$createdBy",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+
+        // Join Event collection
+        {
+          $lookup: {
+            from: "events",
+            localField: "eventId",
+            foreignField: "_id",
+            as: "event",
+          },
+        },
+
+        // Convert event array to object
+        {
+          $unwind: {
+            path: "$event",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+
+        // Select required fields
+        {
+          $project: {
+            _id: 1,
+            title: 1,
+            message: 1,
+            type: 1,
+            createdAt: 1,
+            updatedAt: 1,
+
+            createdBy: {
+              _id: "$createdBy._id",
+              name: "$createdBy.name",
+              email: "$createdBy.email",
+            },
+
+            event: {
+              _id: "$event._id",
+              title: "$event.title",
+              banner: "$event.banner",
+            },
+          },
+        },
+
+        // Latest notification first
+        {
+          $sort: {
+            createdAt: -1,
+          },
+        },
+      ]);
 
       return res.status(HttpStatusCode.SUCCESS).json({
         success: true,
         count: notifications.length,
         data: notifications,
       });
-
     } catch (error) {
+
+      console.error("Get Notifications Error:", error);
       return res.status(HttpStatusCode.SERVER_ERROR).json({
         success: false,
         message: error.message,

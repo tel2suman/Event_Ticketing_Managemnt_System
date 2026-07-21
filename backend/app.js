@@ -7,6 +7,7 @@ const helmet = require("helmet");
 const cookieParser = require("cookie-parser");
 const DatabaseConnection = require("./app/config/db");
 const corsOptions = require("./app/utils/corsOrigin");
+const appRoutes = require("./app/routes/api/index");
 const { globalLimiter } = require("./app/utils/limiter");
 const app = express();
 
@@ -58,7 +59,7 @@ app.get("/", (req, res) => {
 });
 
 // Register backend authentication routes.
-app.use(require("./app/routes/api/index"));
+app.use(appRoutes);
 
 // Handle requests made to undefined application routes.
 app.use((req, res) => {
