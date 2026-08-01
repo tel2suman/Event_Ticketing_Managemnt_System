@@ -11,12 +11,28 @@ const userRoutes = require("./userRoutes");
 
 const categoryRoutes = require("./categoryRoutes");
 
+const ticketTierRoutes = require("./ticketTierRoutes");
+
+const ticketRoutes = require("./ticketRoutes");
+
+const paymentRoutes = require("./paymentRoutes");
+
+const analyticsRoutes = require("./analyticsRoutes");
+
 router.use("/api/v1/auth", authRoutes);
 
-router.use("/api/v2/event", eventRoutes);
+router.use("/api/v1/event", eventRoutes);
 
 router.use("/api/v1/user", userRoutes);
 
-router.use("/api/v2/category", categoryRoutes);
+router.use("/api/v1/category", categoryRoutes);
+
+router.use("/api/v1/ticket-tier", ticketTierRoutes);
+
+router.use("/api/v2/ticket", ticketRoutes);
+
+router.use("/api/v2/payment", paymentRoutes);
+
+router.use("/api/v2/analytics", analyticsRoutes);
 
 module.exports = router;

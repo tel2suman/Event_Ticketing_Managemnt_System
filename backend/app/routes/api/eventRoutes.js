@@ -8,9 +8,10 @@ const {createEventValidation } = require("../../validations/authValidation");
 
 const router = express.Router();
 
-router.post("/create-event", AuthMiddleware, validationMiddleware.validate(createEventValidation),
+router.post("/create-event", AuthMiddleware, 
   RoleMiddleware("admin"),
   Upload.single("banner"),
+  validationMiddleware.validate(createEventValidation),
   EventController.createEvent,
 );
 
@@ -21,9 +22,10 @@ router.get("/all-events", EventController.getAllEvents);
 router.get("/events/category/:categoryId", EventController.getEventsByCategory);
 
 router.put(
-  "/update-event/:id", AuthMiddleware, validationMiddleware.validate(createEventValidation),
+  "/update-event/:id", AuthMiddleware, 
   RoleMiddleware("admin"),
   Upload.single("banner"),
+  validationMiddleware.validate(createEventValidation),
   EventController.updateEvent,
 );
 

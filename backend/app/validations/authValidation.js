@@ -36,6 +36,14 @@ const loginValidation = Joi.object({
   }),
 });
 
+// resendVerificationEmail validation
+const resendVerificationEmailValidation = Joi.object({
+  email: Joi.string().trim().lowercase().email().required().messages({
+    "string.empty": "Email is required.",
+    "string.email": "Please provide a valid email address.",
+  }),
+});
+
 // forgotPassword validation
 const forgotPasswordValidation = Joi.object({
   email: Joi.string().trim().lowercase().email().required().messages({
@@ -127,6 +135,131 @@ const createCategoryValidation = Joi.object({
   }),
 });
 
+
+// createTicketTier validation
+const createTicketTierValidation = Joi.object({
+  eventId: Joi.string().hex().length(24).required().messages({
+    "string.hex": "Invalid event ID",
+    "string.length": "Invalid event ID",
+    "any.required": "Event ID is required",
+  }),
+
+  name: Joi.string().trim().min(2).max(50).required().messages({
+    "string.empty": "Tier name is required",
+    "string.min": "Tier name must be at least 2 characters",
+    "string.max": "Tier name cannot exceed 50 characters",
+    "any.required": "Tier name is required",
+  }),
+
+  price: Joi.number().min(0).required().messages({
+    "number.base": "Price must be a number",
+    "number.min": "Price cannot be negative",
+    "any.required": "Price is required",
+  }),
+
+  quantityAvailable: Joi.number().integer().min(1).required().messages({
+    "number.base": "Available quantity must be a number",
+    "number.min": "Available quantity must be at least 1",
+    "any.required": "Available quantity is required",
+  }),
+
+  benefits: Joi.array().items(Joi.string().trim()).default([]).messages({
+    "array.base": "Benefits must be a list of strings",
+  }),
+
+  isActive: Joi.boolean().default(true),
+});
+
+// updateTicketTier validation
+const updateTicketTierValidation = Joi.object({
+  name: Joi.string().trim().min(2).max(50).messages({
+    "string.min": "Tier name must be at least 2 characters",
+    "string.max": "Tier name cannot exceed 50 characters",
+  }),
+
+  price: Joi.number().min(0).messages({
+    "number.base": "Price must be a number",
+    "number.min": "Price cannot be negative",
+  }),
+
+  quantityAvailable: Joi.number().integer().min(0).messages({
+    "number.base": "Available quantity must be a number",
+    "number.min": "Available quantity cannot be negative",
+  }),
+
+  benefits: Joi.array().items(Joi.string().trim()).messages({
+    "array.base": "Benefits must be a list of strings",
+  }),
+
+  isActive: Joi.boolean(),
+});
+
+// purchaseTicket validation
+const purchaseTicketValidation = Joi.object({
+  eventId: Joi.string().hex().length(24).required().messages({
+    "string.hex": "Invalid event ID",
+    "string.length": "Invalid event ID",
+    "any.required": "Event ID is required",
+  }),
+
+  tierId: Joi.string().hex().length(24).required().messages({
+    "string.hex": "Invalid ticket tier ID",
+    "string.length": "Invalid ticket tier ID",
+    "any.required": "Ticket tier ID is required",
+  }),
+
+  quantity: Joi.number().integer().min(1).max(10).default(1).messages({
+    "number.base": "Quantity must be a number",
+    "number.min": "Quantity must be at least 1",
+    "number.max": "You can purchase a maximum of 10 tickets at a time",
+  }),
+});
+
+// checkInTicket validation (admin scanning at the gate)
+const checkInTicketValidation = Joi.object({
+  qrData: Joi.string().messages({
+    "string.base": "QR data must be a string",
+  }),
+
+  ticketCode: Joi.string().trim().messages({
+    "string.base": "Ticket code must be a string",
+  }),
+})
+  .or("qrData", "ticketCode")
+  .messages({
+    "object.missing": "Either scanned QR data or a manual ticket code is required",
+  });
+
+// createPaymentOrder validation
+const createPaymentOrderValidation = Joi.object({
+  orderId: Joi.string().required().messages({
+    "any.required": "Order ID is required",
+  }),
+});
+
+// verifyPayment validation
+const verifyPaymentValidation = Joi.object({
+  razorpayOrderId: Joi.string().required().messages({
+    "any.required": "Razorpay order ID is required",
+  }),
+
+  razorpayPaymentId: Joi.string().required().messages({
+    "any.required": "Razorpay payment ID is required",
+  }),
+
+  razorpaySignature: Joi.string().required().messages({
+    "any.required": "Razorpay signature is required",
+  }),
+});
+
+// refundPayment validation
+const refundPaymentValidation = Joi.object({
+  amount: Joi.number().min(1).messages({
+    "number.base": "Refund amount must be a number",
+    "number.min": "Refund amount must be greater than 0",
+  }),
+});
+
 module.exports = {
   registerValidation,
   loginValidation,
@@ -134,5 +267,13 @@ module.exports = {
   resetPasswordValidation,
   changePasswordValidation,
   createEventValidation,
-  createCategoryValidation
+  createCategoryValidation,
+  createTicketTierValidation,
+  updateTicketTierValidation,
+  purchaseTicketValidation,
+  checkInTicketValidation,
+  createPaymentOrderValidation,
+  verifyPaymentValidation,
+  refundPaymentValidation,
+  resendVerificationEmailValidation
 };

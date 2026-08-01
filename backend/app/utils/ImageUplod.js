@@ -1,32 +1,26 @@
-
-const fs = require("fs");
-
 const cloudinary = require("../config/cloudinary");
 
-const uploadToCloudinary = async (filePath) => {
-  try {
-    const result = await cloudinary.uploader.upload(filePath, {
-      folder: "uploads",
-      width: 1200,
-      height: 600,
-      crop: "limit",
-      quality: "auto",
-    });
+const uploadToCloudinary = (fileBuffer) => {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        folder: "uploads",
+        width: 1200,
+        height: 600,
+        crop: "limit",
+        quality: "auto",
+      },
+      (error, result) => {
+        if (error) {
+          return reject(error);
+        }
 
-    // Delete local temporary file
-    if (fs.existsSync(filePath)) {
-      await fs.promises.unlink(filePath);
-    }
+        return resolve(result);
+      },
+    );
 
-    return result;
-  } catch (error) {
-    // Delete local file if Cloudinary upload fails
-    if (fs.existsSync(filePath)) {
-      await fs.promises.unlink(filePath);
-    }
-
-    throw error;
-  }
+    uploadStream.end(fileBuffer);
+  });
 };
 
 const deleteFromCloudinary = async (publicId) => {

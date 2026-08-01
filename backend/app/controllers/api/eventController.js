@@ -67,7 +67,7 @@ class EventController {
       }
 
       // Upload image to Cloudinary
-      imageResult = await uploadToCloudinary(req.file.path);
+      imageResult = await uploadToCloudinary(req.file.buffer);
 
       const event = await Event.create({
         title: title.trim(),
@@ -238,7 +238,7 @@ class EventController {
         },
       ]);
 
-      return res.status(HttpStatusCode.OK).json({
+      return res.status(HttpStatusCode.SUCCESS).json({
         success: true,
         count: events.length,
         data: events,
@@ -363,7 +363,7 @@ class EventController {
 
       if (req.file) {
         // Upload new image first
-        imageResult = await uploadToCloudinary(req.file.path);
+        imageResult = await uploadToCloudinary(req.file.buffer);
 
         // Delete old Cloudinary image
         if (event.cloudinary_id) {

@@ -443,6 +443,225 @@ If you did not request this password reset, please ignore this email.
       throw error;
     }
   }
+
+  async sendTicketConfirmationEmail(user, event, tickets) {
+    try {
+      const eventDate = new Date(event.date).toLocaleDateString("en-IN", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
+
+      const totalPaid = tickets.reduce(
+        (sum, ticket) => sum + ticket.priceAtPurchase,
+        0,
+      );
+
+      const ticketCardsHtml = tickets
+        .map(
+          (ticket) => `
+        <table
+          width="100%"
+          cellpadding="0"
+          cellspacing="0"
+          role="presentation"
+          style="
+            margin-bottom: 20px;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            overflow: hidden;
+          "
+        >
+          <tr>
+            <td style="padding: 20px; background-color: #f9fafb;">
+              <p style="margin: 0 0 4px; color: #6b7280; font-size: 13px;">
+                ${ticket.tierId?.name || "Ticket"}
+              </p>
+              <p
+                style="
+                  margin: 0 0 12px;
+                  color: #111827;
+                  font-size: 18px;
+                  font-weight: bold;
+                "
+              >
+                Ticket Code: ${ticket.ticketCode}
+              </p>
+              <img
+                src="${ticket.qrCodeUrl}"
+                alt="Ticket QR Code"
+                width="160"
+                height="160"
+                style="display: block; margin: 0 auto 12px; border-radius: 8px;"
+              />
+              <p style="margin: 0; text-align: center; color: #6b7280; font-size: 13px;">
+                Show this QR code at entry. Price paid: ₹${ticket.priceAtPurchase}
+              </p>
+            </td>
+          </tr>
+        </table>
+      `,
+        )
+        .join("");
+
+      const mailOptions = {
+        from: process.env.EMAIL_FROM,
+        to: user.email,
+        subject: `Your Ticket${tickets.length > 1 ? "s" : ""} for ${event.title}`,
+
+        text: `
+Hi ${user.name},
+
+Your payment was successful! Here are your ticket details for ${event.title}:
+
+Date: ${eventDate}
+Time: ${event.time}
+Location: ${event.location}
+
+Total tickets: ${tickets.length}
+Total paid: ₹${totalPaid}
+
+Ticket codes: ${tickets.map((t) => t.ticketCode).join(", ")}
+
+Please view this email in an HTML-compatible client to see your QR code(s),
+or log in to your account to view/download your tickets.
+
+See you at the event!
+        `,
+
+        html: `
+          <!DOCTYPE html>
+          <html lang="en">
+            <head>
+              <meta charset="UTF-8" />
+              <meta
+                name="viewport"
+                content="width=device-width, initial-scale=1.0"
+              />
+              <title>Your Event Ticket</title>
+            </head>
+
+            <body
+              style="
+                margin: 0;
+                padding: 0;
+                background-color: #f4f6f8;
+                font-family: Arial, Helvetica, sans-serif;
+              "
+            >
+              <table
+                width="100%"
+                cellpadding="0"
+                cellspacing="0"
+                role="presentation"
+              >
+                <tr>
+                  <td align="center" style="padding: 40px 15px">
+                    <table
+                      width="600"
+                      cellpadding="0"
+                      cellspacing="0"
+                      role="presentation"
+                      style="
+                        width: 100%;
+                        max-width: 600px;
+                        background-color: #ffffff;
+                        border-radius: 12px;
+                        overflow: hidden;
+                      "
+                    >
+                      <tr>
+                        <td
+                          align="center"
+                          style="
+                            background-color: #111827;
+                            padding: 32px;
+                          "
+                        >
+                          <h1
+                            style="
+                              margin: 0;
+                              color: #ffffff;
+                              font-size: 28px;
+                            "
+                          >
+                            🎉 Payment Successful
+                          </h1>
+
+                          <p
+                            style="
+                              margin: 10px 0 0;
+                              color: #d1d5db;
+                              font-size: 14px;
+                            "
+                          >
+                            Your ticket${tickets.length > 1 ? "s are" : " is"} ready
+                          </p>
+                        </td>
+                      </tr>
+
+                      <tr>
+                        <td style="padding: 40px 40px 20px">
+                          <h2 style="margin-top: 0; color: #111827;">
+                            ${event.title}
+                          </h2>
+
+                          <p style="color: #4b5563; font-size: 15px; line-height: 1.7; margin: 0;">
+                            📅 ${eventDate} &nbsp;|&nbsp; 🕒 ${event.time}<br/>
+                            📍 ${event.location}
+                          </p>
+
+                          <p style="color: #4b5563; font-size: 15px; margin-top: 16px;">
+                            Hi ${user.name}, thanks for your purchase! You paid
+                            <strong>₹${totalPaid}</strong> for
+                            <strong>${tickets.length} ticket${tickets.length > 1 ? "s" : ""}</strong>.
+                          </p>
+                        </td>
+                      </tr>
+
+                      <tr>
+                        <td style="padding: 0 40px 20px">
+                          ${ticketCardsHtml}
+                        </td>
+                      </tr>
+
+                      <tr>
+                        <td style="padding: 0 40px 30px">
+                          <p style="color: #6b7280; font-size: 13px; line-height: 1.6;">
+                            Please arrive a little early and have your QR
+                            code${tickets.length > 1 ? "s" : ""} ready at the entrance.
+                            Each ticket can only be scanned once.
+                          </p>
+                        </td>
+                      </tr>
+
+                      <tr>
+                        <td
+                          align="center"
+                          style="
+                            padding: 20px;
+                            background-color: #f9fafb;
+                            color: #9ca3af;
+                            font-size: 12px;
+                          "
+                        >
+                          Event Ticketing & Management System
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </body>
+          </html>
+        `,
+      };
+
+      return await transporter.sendMail(mailOptions);
+    } catch (error) {
+      throw error;
+    }
+  }
 }
 
 module.exports = new EmailUtility();

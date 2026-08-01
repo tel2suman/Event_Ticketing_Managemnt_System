@@ -54,7 +54,7 @@ class AuthController {
       return res.status(HttpStatusCode.CREATED).json({
         success: true,
         message:
-          "Registration successful. Please verify your email before signing in.",
+          "Registration successful. A link is sent to your email. Please verify your email before signing in.",
         data: {
           id: user._id,
           name: user.name,
@@ -153,12 +153,76 @@ class AuthController {
     }
   }
 
+  // resendVerificationEmail
+  async resendVerificationEmail(req, res) {
+    try {
+      const { email } = req.body;
+
+      const user = await User.findOne({ email, isDeleted: false });
+
+      const responseMessage =
+        "A verification link has been sent.";
+
+      if (!user) {
+        return res.status(HttpStatusCode.NOT_FOUND).json({
+          success: false,
+          message: "User not found",
+        });
+      }
+
+
+      if (user.isEmailVerified) {
+        return res.status(HttpStatusCode.BAD_REQUEST).json({
+          success: false,
+          message: "Email address has already been verified.",
+        });
+      }
+
+      // Remove any previously issued email verification tokens.
+      await Token.deleteMany({
+        userId: user._id,
+        type: "email_verification",
+      });
+
+      // Generate a cryptographically secure email verification token.
+      const verificationToken = crypto.randomBytes(32).toString("hex");
+
+      // Hash the verification token before storing it in the database.
+      const hashedVerificationToken = await bcrypt.hash(verificationToken, 10);
+
+      await Token.create({
+        userId: user._id,
+        token: hashedVerificationToken,
+        type: "email_verification",
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      });
+
+      const verificationUrl =
+        `${process.env.APP_BASE_URL}/api/v1/auth/verify-email` +
+        `?token=${verificationToken}&id=${user._id}`;
+
+      await EmailUtility.sendVerificationEmail(user, verificationUrl);
+
+      return res.status(HttpStatusCode.SUCCESS).json({
+        success: true,
+        message: responseMessage,
+      });
+    } catch (error) {
+      console.error("Resend verification email error:", error);
+
+      return res.status(HttpStatusCode.SERVER_ERROR).json({
+        success: false,
+        message: "Unable to resend verification email.",
+      });
+    }
+  }
+
   //login
   async login(req, res) {
     try {
       const { email, password } = req.body;
 
-      const user = await User.findOne({ email }).select(
+      const user = await User.findOne({ email, isDeleted: false }).select(
         "+password +refreshToken",
       );
 
@@ -190,7 +254,7 @@ class AuthController {
       const refreshToken = GenerateToken.refreshToken(user);
 
       // Store only the hashed refresh token in the database.
-      user.refreshToken = await bcrypt.hash(refreshToken, 12);
+      user.refreshToken = await bcrypt.hash(refreshToken, 10);
 
       await user.save();
 
@@ -316,15 +380,14 @@ class AuthController {
     try {
       const { email } = req.body;
 
-      const user = await User.findOne({ email });
+      const user = await User.findOne({ email, isDeleted: false });
 
-      const responseMessage =
-        "If an account exists for this email, a password reset link has been sent.";
+
 
       if (!user) {
-        return res.status(HttpStatusCode.SUCCESS).json({
-          success: true,
-          message: responseMessage,
+        return res.status(HttpStatusCode.NOT_FOUND).json({
+          success: false,
+          message: "User does not exist.",
         });
       }
 
@@ -358,7 +421,7 @@ class AuthController {
 
       return res.status(HttpStatusCode.SUCCESS).json({
         success: true,
-        message: responseMessage,
+        message: "A password reset link has been sent.",
       });
     } catch (error) {
       console.error("Forgot password error:", error);
@@ -411,12 +474,23 @@ class AuthController {
         });
       }
 
-      const user = await User.findById(id).select("+password +refreshToken");
+      const user = await User.findOne({ _id: id, isDeleted: false }).select(
+        "+password +refreshToken",
+      );
 
       if (!user) {
         return res.status(HttpStatusCode.NOT_FOUND).json({
           success: false,
           message: "User account not found.",
+        });
+      }
+
+      const isSamePassword = await bcrypt.compare(password, user.password);
+
+      if (isSamePassword) {
+        return res.status(HttpStatusCode.BAD_REQUEST).json({
+          success: false,
+          message: "New password must be different from the current password.",
         });
       }
 
