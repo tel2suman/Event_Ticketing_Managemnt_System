@@ -31,7 +31,7 @@ const eventSchema = new mongoose.Schema(
       required: true,
     },
 
-    //dfdvdvd
+    //fbfbfb
 
     time: {
       type: String,
