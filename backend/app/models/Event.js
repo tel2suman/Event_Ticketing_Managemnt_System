@@ -30,6 +30,7 @@ const eventSchema = new mongoose.Schema(
       type: Date,
       required: true,
     },
+    //////
 
     time: {
       type: String,
