@@ -6,10 +6,7 @@ const morgan = require("morgan");
 const helmet = require("helmet");
 const cookieParser = require("cookie-parser");
 const multer = require("multer");
-
-const passport = require("passport");
-require("./app/config/passport");
-
+const passport = require("./app/config/passport");
 const DatabaseConnection = require("./app/config/db");
 const corsOptions = require("./app/utils/corsOrigin");
 const appRoutes = require("./app/routes/api/index");
