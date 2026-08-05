@@ -11,6 +11,10 @@ const userRoutes = require("./userRoutes");
 
 const categoryRoutes = require("./categoryRoutes");
 
+const cartRoutes = require("./cartRoutes");
+
+const wishListRoutes = require("./wishlistRoutes");
+
 const ticketTierRoutes = require("./ticketTierRoutes");
 
 const ticketRoutes = require("./ticketRoutes");
@@ -26,6 +30,10 @@ router.use("/api/v1/event", eventRoutes);
 router.use("/api/v1/user", userRoutes);
 
 router.use("/api/v1/category", categoryRoutes);
+
+router.use("/api/v1/cart", cartRoutes);
+
+router.use("/api/v1/wishlist", wishListRoutes);
 
 router.use("/api/v1/ticket-tier", ticketTierRoutes);
 

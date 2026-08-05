@@ -7,7 +7,6 @@ const mongoose = require("mongoose");
 class EventController {
   // create event
   async createEvent(req, res) {
-
     let imageResult = null;
 
     try {
@@ -144,9 +143,7 @@ class EventController {
 
   // get events by category
   async getEventsByCategory(req, res) {
-
     try {
-
       const { categoryId } = req.params;
 
       // Validate ObjectId
@@ -256,8 +253,11 @@ class EventController {
   // get all events
   async getAllEvents(req, res) {
     try {
-      const events = await Event.aggregate([
-        // Join Category
+      const page = Number(req.query.page) || 1;
+      const limit = Number(req.query.limit) || 10;
+      const skip = (page - 1) * limit;
+
+      const pipeline = [
         {
           $lookup: {
             from: "categories",
@@ -266,16 +266,12 @@ class EventController {
             as: "category",
           },
         },
-
-        // Convert category array to object
         {
           $unwind: {
             path: "$category",
             preserveNullAndEmptyArrays: true,
           },
         },
-
-        // Join User
         {
           $lookup: {
             from: "users",
@@ -284,16 +280,12 @@ class EventController {
             as: "createdBy",
           },
         },
-
-        // Convert createdBy array to object
         {
           $unwind: {
             path: "$createdBy",
             preserveNullAndEmptyArrays: true,
           },
         },
-
-        // Select required fields
         {
           $project: {
             title: 1,
@@ -305,14 +297,7 @@ class EventController {
             banner: 1,
             status: 1,
             createdAt: 1,
-            updatedAt: 1,
-            categoryId: 1,
-
-            category: {
-              _id: "$category._id",
-              categoryName: "$category.categoryName",
-            },
-
+            categoryName: "$category.categoryName",
             createdBy: {
               _id: "$createdBy._id",
               name: "$createdBy.name",
@@ -320,23 +305,47 @@ class EventController {
             },
           },
         },
-
-        // Latest events first
         {
           $sort: {
             createdAt: -1,
           },
         },
+      ];
+
+      const [events, totalResult] = await Promise.all([
+        Event.aggregate([
+          ...pipeline,
+          {
+            $skip: skip,
+          },
+          {
+            $limit: limit,
+          },
+        ]),
+        Event.aggregate([
+          ...pipeline,
+          {
+            $count: "total",
+          },
+        ]),
       ]);
+
+      const total = totalResult.length ? totalResult[0].total : 0;
 
       return res.status(HttpStatusCode.SUCCESS).json({
         success: true,
-        count: events.length,
+        message: "Events fetched successfully",
+        pagination: {
+          totalRecords: total,
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          perPage: limit,
+          hasNextPage: page < Math.ceil(total / limit),
+          hasPreviousPage: page > 1,
+        },
         data: events,
       });
     } catch (error) {
-      console.error("Get All Events Error:", error);
-
       return res.status(HttpStatusCode.SERVER_ERROR).json({
         success: false,
         message: error.message,
@@ -346,7 +355,6 @@ class EventController {
 
   //update event
   async updateEvent(req, res) {
-
     let imageResult = null;
 
     try {
@@ -538,8 +546,184 @@ class EventController {
         data: notifications,
       });
     } catch (error) {
-
       console.error("Get Notifications Error:", error);
+      return res.status(HttpStatusCode.SERVER_ERROR).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  // Search Events
+  async searchEvents(req, res) {
+    try {
+      const { title, location, date } = req.query;
+
+      const matchStage = {};
+
+      if (title) {
+        matchStage.title = {
+          $regex: title,
+          $options: "i",
+        };
+      }
+
+      if (location) {
+        matchStage.location = {
+          $regex: location,
+          $options: "i",
+        };
+      }
+
+      if (date) {
+        matchStage.date = new Date(date);
+      }
+
+      const events = await Event.aggregate([
+        {
+          $match: matchStage,
+        },
+        {
+          $lookup: {
+            from: "categories",
+            localField: "categoryId",
+            foreignField: "_id",
+            as: "category",
+          },
+        },
+        {
+          $unwind: {
+            path: "$category",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "createdBy",
+            foreignField: "_id",
+            as: "createdBy",
+          },
+        },
+        {
+          $unwind: {
+            path: "$createdBy",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $project: {
+            title: 1,
+            description: 1,
+            location: 1,
+            date: 1,
+            time: 1,
+            organizer: 1,
+            banner: 1,
+            status: 1,
+            createdAt: 1,
+            category: {
+              _id: "$category._id",
+              categoryName: "$category.categoryName",
+            },
+            createdBy: {
+              _id: "$createdBy._id",
+              name: "$createdBy.name",
+              email: "$createdBy.email",
+            },
+          },
+        },
+        {
+          $sort: {
+            date: 1,
+          },
+        },
+      ]);
+
+      return res.status(HttpStatusCode.SUCCESS).json({
+        success: true,
+        count: events.length,
+        data: events,
+      });
+    } catch (error) {
+      console.error(error);
+
+      return res.status(HttpStatusCode.SERVER_ERROR).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  // filter events by category
+  async filterEventsByCategoryName(req, res) {
+    try {
+      const { categoryName } = req.query;
+
+      const events = await Event.aggregate([
+        {
+          $lookup: {
+            from: "categories",
+            localField: "categoryId",
+            foreignField: "_id",
+            as: "category",
+          },
+        },
+        {
+          $unwind: "$category",
+        },
+        {
+          $match: {
+            "category.categoryName": {
+              $regex: `^${categoryName}$`,
+              $options: "i",
+            },
+          },
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "createdBy",
+            foreignField: "_id",
+            as: "createdBy",
+          },
+        },
+        {
+          $unwind: "$createdBy",
+        },
+        {
+          $project: {
+            title: 1,
+            description: 1,
+            location: 1,
+            date: 1,
+            time: 1,
+            organizer: 1,
+            banner: 1,
+            status: 1,
+            createdAt: 1,
+            categoryName: "$category.categoryName",
+            createdBy: {
+              _id: "$createdBy._id",
+              name: "$createdBy.name",
+              email: "$createdBy.email",
+            },
+          },
+        },
+        {
+          $sort: {
+            date: 1,
+          },
+        },
+      ]);
+
+      return res.status(HttpStatusCode.SUCCESS).json({
+        success: true,
+        message: "Events fetched successfully",
+        count: events.length,
+        data: events,
+      });
+    } catch (error) {
       return res.status(HttpStatusCode.SERVER_ERROR).json({
         success: false,
         message: error.message,

@@ -3,7 +3,7 @@ const CategoryController = require("../../controllers/api/categoryController");
 const AuthMiddleware = require("../../middlewares/authMiddleware");
 const validationMiddleware = require("../../middlewares/validationMiddleware");
 const RoleMiddleware = require("../../middlewares/roleMiddleware");
-const {createCategoryValidation } = require("../../validations/authValidation");
+const {createCategoryValidation } = require("../../validations/categoryValidation");
 
 const router = express.Router();
 
