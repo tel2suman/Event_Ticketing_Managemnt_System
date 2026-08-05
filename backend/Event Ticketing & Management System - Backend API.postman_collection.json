@@ -1,11 +1,10 @@
 {
   "info": {
-    "_postman_id": "2fc8f49e-258a-48fd-ac8f-ce6e47a76470",
+    "_postman_id": "e4bb9879-d887-43d6-b279-855788b92b58",
     "name": "Event Ticketing & Management System - Backend API",
     "description": "Full backend API collection generated from the Node.js/Express + MongoDB backend (auth, events, categories, ticket tiers, tickets, payments/Razorpay, analytics).\n\n## Setup\n1. Set the `baseUrl` collection variable (default `http://localhost:3009`).\n2. Run **Auth > Register User**, verify the email (check console/log for the link if email isn't configured), then run **Auth > Login** — this auto-saves `accessToken`/`refreshToken`/`userId` as collection variables used by every other request.\n3. For admin-only routes, log in with a user whose `role` is `admin` (see `seedAdmin.js` in the backend, or promote a user directly in MongoDB).\n4. Typical happy-path flow: Category > Create Category → Event > Create Event → Ticket Tier > Create Ticket Tier → Ticket > Purchase Ticket → Payment > Create Razorpay Order → (complete checkout on the client / Razorpay test mode) → Payment > Verify Payment.\n\nAll protected routes use collection-level Bearer auth (`{{accessToken}}`); public routes override this with 'No Auth'.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "_exporter_id": "51322178",
-    "_collection_link": "https://go.postman.co/collection/51322178-2fc8f49e-258a-48fd-ac8f-ce6e47a76470?source=collection_link"
+    "_exporter_id": "19470089"
   },
   "item": [
     {
@@ -724,7 +723,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/event/all-events",
+              "raw": "{{baseUrl}}/api/v1/event/all-events?page=1&limit=10",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -733,11 +732,142 @@
                 "v1",
                 "event",
                 "all-events"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
               ]
             },
             "description": "Public. Supports listing/filtering of events."
           },
-          "response": []
+          "response": [
+            {
+              "name": "Get All Events",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/event/all-events?page=1&limit=10",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "event",
+                    "all-events"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Cross-Origin-Opener-Policy",
+                  "value": "same-origin"
+                },
+                {
+                  "key": "Cross-Origin-Resource-Policy",
+                  "value": "same-origin"
+                },
+                {
+                  "key": "Origin-Agent-Cluster",
+                  "value": "?1"
+                },
+                {
+                  "key": "Referrer-Policy",
+                  "value": "no-referrer"
+                },
+                {
+                  "key": "Strict-Transport-Security",
+                  "value": "max-age=31536000; includeSubDomains"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-DNS-Prefetch-Control",
+                  "value": "off"
+                },
+                {
+                  "key": "X-Download-Options",
+                  "value": "noopen"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "SAMEORIGIN"
+                },
+                {
+                  "key": "X-Permitted-Cross-Domain-Policies",
+                  "value": "none"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "0"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Origin"
+                },
+                {
+                  "key": "Access-Control-Allow-Credentials",
+                  "value": "true"
+                },
+                {
+                  "key": "RateLimit",
+                  "value": "\"100-in-15min\"; r=97; t=875"
+                },
+                {
+                  "key": "RateLimit-Policy",
+                  "value": "\"100-in-15min\"; q=100; w=900; pk=:YmIwY2Q1MTM2YWU1:"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "2200"
+                },
+                {
+                  "key": "ETag",
+                  "value": "W/\"898-EJ+XPWwIdKf0iMaONAeW8OV/WPw\""
+                },
+                {
+                  "key": "Date",
+                  "value": "Wed, 05 Aug 2026 10:00:08 GMT"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                },
+                {
+                  "key": "Keep-Alive",
+                  "value": "timeout=5"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"success\": true,\n    \"message\": \"Events fetched successfully\",\n    \"pagination\": {\n        \"totalRecords\": 4,\n        \"currentPage\": 1,\n        \"totalPages\": 1,\n        \"perPage\": 10,\n        \"hasNextPage\": false,\n        \"hasPreviousPage\": false\n    },\n    \"data\": [\n        {\n            \"_id\": \"6a702d667cac4df7f46e32aa\",\n            \"title\": \"Stand Up Comedy Night 2026\",\n            \"description\": \"A comedy show with kapil\",\n            \"location\": \"Gurgaon\",\n            \"date\": \"2026-10-11T00:00:00.000Z\",\n            \"time\": \"19:30\",\n            \"organizer\": \"K9 productions & flims\",\n            \"banner\": \"https://res.cloudinary.com/dkgmvphen/image/upload/v1785736550/uploads/oytvezuvaa15pmrk5kdj.jpg\",\n            \"status\": \"active\",\n            \"createdBy\": {\n                \"_id\": \"6a5a5b9a37cbad0267036474\",\n                \"name\": \"System Admin\",\n                \"email\": \"superadmin_0001@yopmail.com\"\n            },\n            \"createdAt\": \"2026-08-03T05:55:50.826Z\",\n            \"categoryName\": \"Comedy\"\n        },\n        {\n            \"_id\": \"6a5fb09facdfb9308ce7a7dd\",\n            \"title\": \"Kumar Sanu Concert 2026\",\n            \"description\": \"A legendary singing concert\",\n            \"location\": \"kolkata\",\n            \"date\": \"2026-09-30T00:00:00.000Z\",\n            \"time\": \"19:30\",\n            \"organizer\": \"Aritist Forum Of Kolkata\",\n            \"banner\": \"https://res.cloudinary.com/dkgmvphen/image/upload/v1784656030/uploads/ansgbj9fwjdjdzanb9hl.png\",\n            \"status\": \"active\",\n            \"createdBy\": {\n                \"_id\": \"6a5a5b9a37cbad0267036474\",\n                \"name\": \"System Admin\",\n                \"email\": \"superadmin_0001@yopmail.com\"\n            },\n            \"createdAt\": \"2026-07-21T17:47:11.866Z\",\n            \"categoryName\": \"Live Music\"\n        },\n        {\n            \"_id\": \"6a5ba9ba3ac75fdf09f72e39\",\n            \"title\": \"Arijit Singh Concert 2026\",\n            \"description\": \"A legendary singing concert\",\n            \"location\": \"kolkata\",\n            \"date\": \"2026-08-15T00:00:00.000Z\",\n            \"time\": \"18:00\",\n            \"organizer\": \"Aritist Forum Of Kolkata\",\n            \"banner\": \"https://res.cloudinary.com/dkgmvphen/image/upload/v1784392121/uploads/aqujkfncfcpy9rcjebly.png\",\n            \"status\": \"active\",\n            \"createdBy\": {\n                \"_id\": \"6a5a5b9a37cbad0267036474\",\n                \"name\": \"System Admin\",\n                \"email\": \"superadmin_0001@yopmail.com\"\n            },\n            \"createdAt\": \"2026-07-18T16:28:42.066Z\"\n        },\n        {\n            \"_id\": \"6a5a8dd37177e17742e040d0\",\n            \"title\": \"Startup Summit 2026\",\n            \"description\": \"A national startup conference\",\n            \"location\": \"Dehradun\",\n            \"date\": \"2026-08-22T00:00:00.000Z\",\n            \"time\": \"12:00\",\n            \"organizer\": \"Doon Businnes School\",\n            \"banner\": \"https://res.cloudinary.com/dkgmvphen/image/upload/v1784389996/uploads/nlo1ru89ebiecwqart7c.jpg\",\n            \"status\": \"active\",\n            \"createdBy\": {\n                \"_id\": \"6a5a5b9a37cbad0267036474\",\n                \"name\": \"System Admin\",\n                \"email\": \"superadmin_0001@yopmail.com\"\n            },\n            \"createdAt\": \"2026-07-17T20:17:23.266Z\"\n        }\n    ]\n}"
+            }
+          ]
         },
         {
           "name": "Get Events By Category",
@@ -877,6 +1007,316 @@
               ]
             },
             "description": "Requires auth (admin or user)."
+          },
+          "response": []
+        },
+        {
+          "name": "Search Events",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/event/search-events?title=Kumar Sanu&location=kolkata&date=2026-09-30",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "event",
+                "search-events"
+              ],
+              "query": [
+                {
+                  "key": "title",
+                  "value": "Kumar Sanu"
+                },
+                {
+                  "key": "location",
+                  "value": "kolkata"
+                },
+                {
+                  "key": "date",
+                  "value": "2026-09-30"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Search Events",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/event/search-events?title=Kumar Sanu&location=kolkata&date=2026-09-30",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "event",
+                    "search-events"
+                  ],
+                  "query": [
+                    {
+                      "key": "title",
+                      "value": "Kumar Sanu"
+                    },
+                    {
+                      "key": "location",
+                      "value": "kolkata"
+                    },
+                    {
+                      "key": "date",
+                      "value": "2026-09-30"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Cross-Origin-Opener-Policy",
+                  "value": "same-origin"
+                },
+                {
+                  "key": "Cross-Origin-Resource-Policy",
+                  "value": "same-origin"
+                },
+                {
+                  "key": "Origin-Agent-Cluster",
+                  "value": "?1"
+                },
+                {
+                  "key": "Referrer-Policy",
+                  "value": "no-referrer"
+                },
+                {
+                  "key": "Strict-Transport-Security",
+                  "value": "max-age=31536000; includeSubDomains"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-DNS-Prefetch-Control",
+                  "value": "off"
+                },
+                {
+                  "key": "X-Download-Options",
+                  "value": "noopen"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "SAMEORIGIN"
+                },
+                {
+                  "key": "X-Permitted-Cross-Domain-Policies",
+                  "value": "none"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "0"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Origin"
+                },
+                {
+                  "key": "Access-Control-Allow-Credentials",
+                  "value": "true"
+                },
+                {
+                  "key": "RateLimit",
+                  "value": "\"100-in-15min\"; r=97; t=450"
+                },
+                {
+                  "key": "RateLimit-Policy",
+                  "value": "\"100-in-15min\"; q=100; w=900; pk=:YmIwY2Q1MTM2YWU1:"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "601"
+                },
+                {
+                  "key": "ETag",
+                  "value": "W/\"259-BVRsyiOpa5oZj2vim78R4l+FzOY\""
+                },
+                {
+                  "key": "Date",
+                  "value": "Tue, 04 Aug 2026 07:34:50 GMT"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                },
+                {
+                  "key": "Keep-Alive",
+                  "value": "timeout=5"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"success\": true,\n    \"count\": 1,\n    \"data\": [\n        {\n            \"_id\": \"6a5fb09facdfb9308ce7a7dd\",\n            \"title\": \"Kumar Sanu Concert 2026\",\n            \"description\": \"A legendary singing concert\",\n            \"location\": \"kolkata\",\n            \"date\": \"2026-09-30T00:00:00.000Z\",\n            \"time\": \"19:30\",\n            \"organizer\": \"Aritist Forum Of Kolkata\",\n            \"banner\": \"https://res.cloudinary.com/dkgmvphen/image/upload/v1784656030/uploads/ansgbj9fwjdjdzanb9hl.png\",\n            \"status\": \"active\",\n            \"createdBy\": {\n                \"_id\": \"6a5a5b9a37cbad0267036474\",\n                \"name\": \"System Admin\",\n                \"email\": \"superadmin_0001@yopmail.com\"\n            },\n            \"createdAt\": \"2026-07-21T17:47:11.866Z\",\n            \"category\": {\n                \"_id\": \"6a5fae27f31197f28a95ff30\",\n                \"categoryName\": \"Live Music\"\n            }\n        }\n    ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Filter by Category",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/event/filter-events?categoryName=Live Music",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "event",
+                "filter-events"
+              ],
+              "query": [
+                {
+                  "key": "categoryName",
+                  "value": "Live Music"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Filter by Category",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/event/filter-events?categoryName=Live Music",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "event",
+                    "filter-events"
+                  ],
+                  "query": [
+                    {
+                      "key": "categoryName",
+                      "value": "Live Music"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Cross-Origin-Opener-Policy",
+                  "value": "same-origin"
+                },
+                {
+                  "key": "Cross-Origin-Resource-Policy",
+                  "value": "same-origin"
+                },
+                {
+                  "key": "Origin-Agent-Cluster",
+                  "value": "?1"
+                },
+                {
+                  "key": "Referrer-Policy",
+                  "value": "no-referrer"
+                },
+                {
+                  "key": "Strict-Transport-Security",
+                  "value": "max-age=31536000; includeSubDomains"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-DNS-Prefetch-Control",
+                  "value": "off"
+                },
+                {
+                  "key": "X-Download-Options",
+                  "value": "noopen"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "SAMEORIGIN"
+                },
+                {
+                  "key": "X-Permitted-Cross-Domain-Policies",
+                  "value": "none"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "0"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Origin"
+                },
+                {
+                  "key": "Access-Control-Allow-Credentials",
+                  "value": "true"
+                },
+                {
+                  "key": "RateLimit",
+                  "value": "\"100-in-15min\"; r=97; t=856"
+                },
+                {
+                  "key": "RateLimit-Policy",
+                  "value": "\"100-in-15min\"; q=100; w=900; pk=:YmIwY2Q1MTM2YWU1:"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "595"
+                },
+                {
+                  "key": "ETag",
+                  "value": "W/\"253-tTjDzmEWZAfCdme+r9AQzjXV0GM\""
+                },
+                {
+                  "key": "Date",
+                  "value": "Tue, 04 Aug 2026 08:31:07 GMT"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                },
+                {
+                  "key": "Keep-Alive",
+                  "value": "timeout=5"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"success\": true,\n    \"message\": \"Events fetched successfully\",\n    \"count\": 1,\n    \"data\": [\n        {\n            \"_id\": \"6a5fb09facdfb9308ce7a7dd\",\n            \"title\": \"Kumar Sanu Concert 2026\",\n            \"description\": \"A legendary singing concert\",\n            \"location\": \"kolkata\",\n            \"date\": \"2026-09-30T00:00:00.000Z\",\n            \"time\": \"19:30\",\n            \"organizer\": \"Aritist Forum Of Kolkata\",\n            \"banner\": \"https://res.cloudinary.com/dkgmvphen/image/upload/v1784656030/uploads/ansgbj9fwjdjdzanb9hl.png\",\n            \"status\": \"active\",\n            \"createdBy\": {\n                \"_id\": \"6a5a5b9a37cbad0267036474\",\n                \"name\": \"System Admin\",\n                \"email\": \"superadmin_0001@yopmail.com\"\n            },\n            \"createdAt\": \"2026-07-21T17:47:11.866Z\",\n            \"categoryName\": \"Live Music\"\n        }\n    ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "New Request",
+          "request": {
+            "method": "GET",
+            "header": []
           },
           "response": []
         }
@@ -1088,6 +1528,1140 @@
         }
       ],
       "description": "Self-service profile management + admin user management."
+    },
+    {
+      "name": "Cart",
+      "item": [
+        {
+          "name": "Add-To-Cart",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"eventId\": \"6a702d667cac4df7f46e32aa\",\r\n    \"quantity\": \"1\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/cart/add-to-cart",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "cart",
+                "add-to-cart"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Add-To-Cart",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"eventId\": \"6a702d667cac4df7f46e32aa\",\r\n    \"quantity\": \"1\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/cart/add-to-cart",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "cart",
+                    "add-to-cart"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Cross-Origin-Opener-Policy",
+                  "value": "same-origin"
+                },
+                {
+                  "key": "Cross-Origin-Resource-Policy",
+                  "value": "same-origin"
+                },
+                {
+                  "key": "Origin-Agent-Cluster",
+                  "value": "?1"
+                },
+                {
+                  "key": "Referrer-Policy",
+                  "value": "no-referrer"
+                },
+                {
+                  "key": "Strict-Transport-Security",
+                  "value": "max-age=31536000; includeSubDomains"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-DNS-Prefetch-Control",
+                  "value": "off"
+                },
+                {
+                  "key": "X-Download-Options",
+                  "value": "noopen"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "SAMEORIGIN"
+                },
+                {
+                  "key": "X-Permitted-Cross-Domain-Policies",
+                  "value": "none"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "0"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Origin"
+                },
+                {
+                  "key": "Access-Control-Allow-Credentials",
+                  "value": "true"
+                },
+                {
+                  "key": "RateLimit",
+                  "value": "\"100-in-15min\"; r=99; t=900"
+                },
+                {
+                  "key": "RateLimit-Policy",
+                  "value": "\"100-in-15min\"; q=100; w=900; pk=:YmIwY2Q1MTM2YWU1:"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "254"
+                },
+                {
+                  "key": "ETag",
+                  "value": "W/\"fe-XRNb67sRfwO3ZqT9u6ofzCeUCYM\""
+                },
+                {
+                  "key": "Date",
+                  "value": "Tue, 04 Aug 2026 09:48:42 GMT"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                },
+                {
+                  "key": "Keep-Alive",
+                  "value": "timeout=5"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"success\": true,\n    \"message\": \"Event added to cart\",\n    \"data\": {\n        \"userId\": \"6a5a5b9a37cbad0267036474\",\n        \"eventId\": \"6a702d667cac4df7f46e32aa\",\n        \"quantity\": 1,\n        \"_id\": \"6a71b57a2ecf8a184dc5de9a\",\n        \"createdAt\": \"2026-08-04T09:48:42.734Z\",\n        \"updatedAt\": \"2026-08-04T09:48:42.734Z\"\n    }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get User Cart",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"eventId\": \"6a702d667cac4df7f46e32aa\",\r\n    \"quantity\": \"1\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/cart/my-cart",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "cart",
+                "my-cart"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Get User Cart",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": []
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/cart/my-cart",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "cart",
+                    "my-cart"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Cross-Origin-Opener-Policy",
+                  "value": "same-origin"
+                },
+                {
+                  "key": "Cross-Origin-Resource-Policy",
+                  "value": "same-origin"
+                },
+                {
+                  "key": "Origin-Agent-Cluster",
+                  "value": "?1"
+                },
+                {
+                  "key": "Referrer-Policy",
+                  "value": "no-referrer"
+                },
+                {
+                  "key": "Strict-Transport-Security",
+                  "value": "max-age=31536000; includeSubDomains"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-DNS-Prefetch-Control",
+                  "value": "off"
+                },
+                {
+                  "key": "X-Download-Options",
+                  "value": "noopen"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "SAMEORIGIN"
+                },
+                {
+                  "key": "X-Permitted-Cross-Domain-Policies",
+                  "value": "none"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "0"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Origin"
+                },
+                {
+                  "key": "Access-Control-Allow-Credentials",
+                  "value": "true"
+                },
+                {
+                  "key": "RateLimit",
+                  "value": "\"100-in-15min\"; r=99; t=900"
+                },
+                {
+                  "key": "RateLimit-Policy",
+                  "value": "\"100-in-15min\"; q=100; w=900; pk=:YmIwY2Q1MTM2YWU1:"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "378"
+                },
+                {
+                  "key": "ETag",
+                  "value": "W/\"17a-bvfvepmddaezXfVfTWtBp+CreOs\""
+                },
+                {
+                  "key": "Date",
+                  "value": "Tue, 04 Aug 2026 09:57:57 GMT"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                },
+                {
+                  "key": "Keep-Alive",
+                  "value": "timeout=5"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"success\": true,\n    \"count\": 1,\n    \"data\": [\n        {\n            \"_id\": \"6a71b57a2ecf8a184dc5de9a\",\n            \"quantity\": 1,\n            \"createdAt\": \"2026-08-04T09:48:42.734Z\",\n            \"event\": {\n                \"_id\": \"6a702d667cac4df7f46e32aa\",\n                \"title\": \"Stand Up Comedy Night 2026\",\n                \"banner\": \"https://res.cloudinary.com/dkgmvphen/image/upload/v1785736550/uploads/oytvezuvaa15pmrk5kdj.jpg\",\n                \"location\": \"Gurgaon\",\n                \"date\": \"2026-10-11T00:00:00.000Z\",\n                \"time\": \"19:30\"\n            }\n        }\n    ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Cart",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"quantity\": \"3\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/cart/update-cart/{{cartId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "cart",
+                "update-cart",
+                "{{cartId}}"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Update Cart",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"quantity\": \"3\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/cart/update-cart/{{cartId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "cart",
+                    "update-cart",
+                    "{{cartId}}"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Cross-Origin-Opener-Policy",
+                  "value": "same-origin"
+                },
+                {
+                  "key": "Cross-Origin-Resource-Policy",
+                  "value": "same-origin"
+                },
+                {
+                  "key": "Origin-Agent-Cluster",
+                  "value": "?1"
+                },
+                {
+                  "key": "Referrer-Policy",
+                  "value": "no-referrer"
+                },
+                {
+                  "key": "Strict-Transport-Security",
+                  "value": "max-age=31536000; includeSubDomains"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-DNS-Prefetch-Control",
+                  "value": "off"
+                },
+                {
+                  "key": "X-Download-Options",
+                  "value": "noopen"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "SAMEORIGIN"
+                },
+                {
+                  "key": "X-Permitted-Cross-Domain-Policies",
+                  "value": "none"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "0"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Origin"
+                },
+                {
+                  "key": "Access-Control-Allow-Credentials",
+                  "value": "true"
+                },
+                {
+                  "key": "RateLimit",
+                  "value": "\"100-in-15min\"; r=98; t=851"
+                },
+                {
+                  "key": "RateLimit-Policy",
+                  "value": "\"100-in-15min\"; q=100; w=900; pk=:YmIwY2Q1MTM2YWU1:"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "247"
+                },
+                {
+                  "key": "ETag",
+                  "value": "W/\"f7-WdsJHWvoHOvWtPy7chF5tKidrgQ\""
+                },
+                {
+                  "key": "Date",
+                  "value": "Tue, 04 Aug 2026 10:26:34 GMT"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                },
+                {
+                  "key": "Keep-Alive",
+                  "value": "timeout=5"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"success\": true,\n    \"message\": \"Cart updated\",\n    \"data\": {\n        \"_id\": \"6a71b57a2ecf8a184dc5de9a\",\n        \"userId\": \"6a5a5b9a37cbad0267036474\",\n        \"eventId\": \"6a702d667cac4df7f46e32aa\",\n        \"quantity\": 3,\n        \"createdAt\": \"2026-08-04T09:48:42.734Z\",\n        \"updatedAt\": \"2026-08-04T10:26:34.400Z\"\n    }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Remove Cart",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/cart/remove-cart/{{cartId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "cart",
+                "remove-cart",
+                "{{cartId}}"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Remove Cart",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/cart/remove-cart/{{cartId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "cart",
+                    "remove-cart",
+                    "{{cartId}}"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Cross-Origin-Opener-Policy",
+                  "value": "same-origin"
+                },
+                {
+                  "key": "Cross-Origin-Resource-Policy",
+                  "value": "same-origin"
+                },
+                {
+                  "key": "Origin-Agent-Cluster",
+                  "value": "?1"
+                },
+                {
+                  "key": "Referrer-Policy",
+                  "value": "no-referrer"
+                },
+                {
+                  "key": "Strict-Transport-Security",
+                  "value": "max-age=31536000; includeSubDomains"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-DNS-Prefetch-Control",
+                  "value": "off"
+                },
+                {
+                  "key": "X-Download-Options",
+                  "value": "noopen"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "SAMEORIGIN"
+                },
+                {
+                  "key": "X-Permitted-Cross-Domain-Policies",
+                  "value": "none"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "0"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Origin"
+                },
+                {
+                  "key": "Access-Control-Allow-Credentials",
+                  "value": "true"
+                },
+                {
+                  "key": "RateLimit",
+                  "value": "\"100-in-15min\"; r=98; t=882"
+                },
+                {
+                  "key": "RateLimit-Policy",
+                  "value": "\"100-in-15min\"; q=100; w=900; pk=:YmIwY2Q1MTM2YWU1:"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "52"
+                },
+                {
+                  "key": "ETag",
+                  "value": "W/\"34-VTf7YyA5M+3kR69/M+94gTStrC4\""
+                },
+                {
+                  "key": "Date",
+                  "value": "Tue, 04 Aug 2026 11:06:46 GMT"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                },
+                {
+                  "key": "Keep-Alive",
+                  "value": "timeout=5"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"success\": true,\n    \"message\": \"Event removed from cart\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Clear Cart",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/cart/clear-cart",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "cart",
+                "clear-cart"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Clear Cart",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/cart/clear-cart",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "cart",
+                    "clear-cart"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Cross-Origin-Opener-Policy",
+                  "value": "same-origin"
+                },
+                {
+                  "key": "Cross-Origin-Resource-Policy",
+                  "value": "same-origin"
+                },
+                {
+                  "key": "Origin-Agent-Cluster",
+                  "value": "?1"
+                },
+                {
+                  "key": "Referrer-Policy",
+                  "value": "no-referrer"
+                },
+                {
+                  "key": "Strict-Transport-Security",
+                  "value": "max-age=31536000; includeSubDomains"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-DNS-Prefetch-Control",
+                  "value": "off"
+                },
+                {
+                  "key": "X-Download-Options",
+                  "value": "noopen"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "SAMEORIGIN"
+                },
+                {
+                  "key": "X-Permitted-Cross-Domain-Policies",
+                  "value": "none"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "0"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Origin"
+                },
+                {
+                  "key": "Access-Control-Allow-Credentials",
+                  "value": "true"
+                },
+                {
+                  "key": "RateLimit",
+                  "value": "\"100-in-15min\"; r=98; t=748"
+                },
+                {
+                  "key": "RateLimit-Policy",
+                  "value": "\"100-in-15min\"; q=100; w=900; pk=:YmIwY2Q1MTM2YWU1:"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "54"
+                },
+                {
+                  "key": "ETag",
+                  "value": "W/\"36-ivwsWWaXqtAgjTPTxCl7cJTdXe8\""
+                },
+                {
+                  "key": "Date",
+                  "value": "Wed, 05 Aug 2026 07:09:15 GMT"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                },
+                {
+                  "key": "Keep-Alive",
+                  "value": "timeout=5"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"success\": true,\n    \"message\": \"Cart cleared successfully\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "WishList",
+      "item": [
+        {
+          "name": "Add To WishList",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"eventId\": \"6a702d667cac4df7f46e32aa\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/wishlist/add-to-wishlist",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "wishlist",
+                "add-to-wishlist"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Add To WishList",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"eventId\": \"6a702d667cac4df7f46e32aa\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/wishlist/add-to-wishlist",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "wishlist",
+                    "add-to-wishlist"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Cross-Origin-Opener-Policy",
+                  "value": "same-origin"
+                },
+                {
+                  "key": "Cross-Origin-Resource-Policy",
+                  "value": "same-origin"
+                },
+                {
+                  "key": "Origin-Agent-Cluster",
+                  "value": "?1"
+                },
+                {
+                  "key": "Referrer-Policy",
+                  "value": "no-referrer"
+                },
+                {
+                  "key": "Strict-Transport-Security",
+                  "value": "max-age=31536000; includeSubDomains"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-DNS-Prefetch-Control",
+                  "value": "off"
+                },
+                {
+                  "key": "X-Download-Options",
+                  "value": "noopen"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "SAMEORIGIN"
+                },
+                {
+                  "key": "X-Permitted-Cross-Domain-Policies",
+                  "value": "none"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "0"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Origin"
+                },
+                {
+                  "key": "Access-Control-Allow-Credentials",
+                  "value": "true"
+                },
+                {
+                  "key": "RateLimit",
+                  "value": "\"100-in-15min\"; r=99; t=900"
+                },
+                {
+                  "key": "RateLimit-Policy",
+                  "value": "\"100-in-15min\"; q=100; w=900; pk=:YmIwY2Q1MTM2YWU1:"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "266"
+                },
+                {
+                  "key": "ETag",
+                  "value": "W/\"10a-eooIj0N5x48vs3C15OwH5ddfizs\""
+                },
+                {
+                  "key": "Date",
+                  "value": "Wed, 05 Aug 2026 07:50:11 GMT"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                },
+                {
+                  "key": "Keep-Alive",
+                  "value": "timeout=5"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"success\": true,\n    \"message\": \"Event added to wishlist successfully\",\n    \"data\": {\n        \"userId\": \"6a5a5b9a37cbad0267036474\",\n        \"eventId\": \"6a702d667cac4df7f46e32aa\",\n        \"_id\": \"6a72eb333a4719207f6b1762\",\n        \"createdAt\": \"2026-08-05T07:50:11.553Z\",\n        \"updatedAt\": \"2026-08-05T07:50:11.553Z\",\n        \"__v\": 0\n    }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Wishlist",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/wishlist/my-wishlist",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "wishlist",
+                "my-wishlist"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Get Wishlist",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/wishlist/my-wishlist",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "wishlist",
+                    "my-wishlist"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Cross-Origin-Opener-Policy",
+                  "value": "same-origin"
+                },
+                {
+                  "key": "Cross-Origin-Resource-Policy",
+                  "value": "same-origin"
+                },
+                {
+                  "key": "Origin-Agent-Cluster",
+                  "value": "?1"
+                },
+                {
+                  "key": "Referrer-Policy",
+                  "value": "no-referrer"
+                },
+                {
+                  "key": "Strict-Transport-Security",
+                  "value": "max-age=31536000; includeSubDomains"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-DNS-Prefetch-Control",
+                  "value": "off"
+                },
+                {
+                  "key": "X-Download-Options",
+                  "value": "noopen"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "SAMEORIGIN"
+                },
+                {
+                  "key": "X-Permitted-Cross-Domain-Policies",
+                  "value": "none"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "0"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Origin"
+                },
+                {
+                  "key": "Access-Control-Allow-Credentials",
+                  "value": "true"
+                },
+                {
+                  "key": "RateLimit",
+                  "value": "\"100-in-15min\"; r=97; t=882"
+                },
+                {
+                  "key": "RateLimit-Policy",
+                  "value": "\"100-in-15min\"; q=100; w=900; pk=:YmIwY2Q1MTM2YWU1:"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "444"
+                },
+                {
+                  "key": "ETag",
+                  "value": "W/\"1bc-Kmk8ryELDXmHCPrbOfxJwUCJMrM\""
+                },
+                {
+                  "key": "Date",
+                  "value": "Wed, 05 Aug 2026 09:18:59 GMT"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                },
+                {
+                  "key": "Keep-Alive",
+                  "value": "timeout=5"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"success\": true,\n    \"count\": 1,\n    \"data\": [\n        {\n            \"_id\": \"6a72eb333a4719207f6b1762\",\n            \"createdAt\": \"2026-08-05T07:50:11.553Z\",\n            \"event\": {\n                \"_id\": \"6a702d667cac4df7f46e32aa\",\n                \"title\": \"Stand Up Comedy Night 2026\",\n                \"banner\": \"https://res.cloudinary.com/dkgmvphen/image/upload/v1785736550/uploads/oytvezuvaa15pmrk5kdj.jpg\",\n                \"location\": \"Gurgaon\",\n                \"date\": \"2026-10-11T00:00:00.000Z\",\n                \"time\": \"19:30\",\n                \"organizer\": \"K9 productions & flims\",\n                \"status\": \"active\",\n                \"categoryName\": \"Comedy\"\n            }\n        }\n    ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Remove Wishlist",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/wishlist/remove-from-wishlist/{{wishlistId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "wishlist",
+                "remove-from-wishlist",
+                "{{wishlistId}}"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Remove Wishlist",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/wishlist/remove-from-wishlist/{{wishlistId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "wishlist",
+                    "remove-from-wishlist",
+                    "{{wishlistId}}"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Cross-Origin-Opener-Policy",
+                  "value": "same-origin"
+                },
+                {
+                  "key": "Cross-Origin-Resource-Policy",
+                  "value": "same-origin"
+                },
+                {
+                  "key": "Origin-Agent-Cluster",
+                  "value": "?1"
+                },
+                {
+                  "key": "Referrer-Policy",
+                  "value": "no-referrer"
+                },
+                {
+                  "key": "Strict-Transport-Security",
+                  "value": "max-age=31536000; includeSubDomains"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-DNS-Prefetch-Control",
+                  "value": "off"
+                },
+                {
+                  "key": "X-Download-Options",
+                  "value": "noopen"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "SAMEORIGIN"
+                },
+                {
+                  "key": "X-Permitted-Cross-Domain-Policies",
+                  "value": "none"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "0"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Origin"
+                },
+                {
+                  "key": "Access-Control-Allow-Credentials",
+                  "value": "true"
+                },
+                {
+                  "key": "RateLimit",
+                  "value": "\"100-in-15min\"; r=99; t=900"
+                },
+                {
+                  "key": "RateLimit-Policy",
+                  "value": "\"100-in-15min\"; q=100; w=900; pk=:YmIwY2Q1MTM2YWU1:"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "69"
+                },
+                {
+                  "key": "ETag",
+                  "value": "W/\"45-qE8mCWKeqSHjiPrklZkGU0VvfBc\""
+                },
+                {
+                  "key": "Date",
+                  "value": "Wed, 05 Aug 2026 09:33:06 GMT"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                },
+                {
+                  "key": "Keep-Alive",
+                  "value": "timeout=5"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"success\": true,\n    \"message\": \"Event removed from wishlist successfully\"\n}"
+            }
+          ]
+        }
+      ]
     },
     {
       "name": "Ticket Tier",
@@ -1786,88 +3360,79 @@
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:3009",
-      "type": "string"
+      "value": "http://localhost:3009"
     },
     {
       "key": "accessToken",
-      "value": "",
-      "type": "string"
+      "value": ""
     },
     {
       "key": "refreshToken",
-      "value": "",
-      "type": "string"
+      "value": ""
     },
     {
       "key": "userId",
-      "value": "",
-      "type": "string"
+      "value": ""
     },
     {
       "key": "targetUserId",
-      "value": "",
-      "type": "string"
+      "value": ""
     },
     {
       "key": "verificationToken",
-      "value": "",
-      "type": "string"
+      "value": ""
     },
     {
       "key": "resetToken",
-      "value": "",
-      "type": "string"
+      "value": ""
     },
     {
       "key": "categoryId",
-      "value": "",
-      "type": "string"
+      "value": ""
     },
     {
       "key": "eventId",
-      "value": "",
-      "type": "string"
+      "value": ""
     },
     {
       "key": "tierId",
-      "value": "",
-      "type": "string"
+      "value": ""
     },
     {
       "key": "orderId",
-      "value": "",
-      "type": "string"
+      "value": ""
     },
     {
       "key": "ticketId",
-      "value": "",
-      "type": "string"
+      "value": ""
     },
     {
       "key": "ticketCode",
-      "value": "",
-      "type": "string"
+      "value": ""
     },
     {
       "key": "paymentId",
-      "value": "",
-      "type": "string"
+      "value": ""
     },
     {
       "key": "razorpayOrderId",
-      "value": "",
-      "type": "string"
+      "value": ""
     },
     {
       "key": "razorpayPaymentId",
-      "value": "",
-      "type": "string"
+      "value": ""
     },
     {
       "key": "razorpaySignature",
-      "value": "",
-      "type": "string"
+      "value": ""
+    },
+    {
+      "key": "cartId",
+      "value": ""
+    },
+    {
+      "key": "wishlistId",
+      "value": ""
     }
   ]
 }

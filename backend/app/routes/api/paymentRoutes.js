@@ -7,7 +7,7 @@ const {
   createPaymentOrderValidation,
   verifyPaymentValidation,
   refundPaymentValidation,
-} = require("../../validations/authValidation");
+} = require("../../validations/paymentValidation");
 
 const router = express.Router();
 

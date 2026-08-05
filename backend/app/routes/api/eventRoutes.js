@@ -4,37 +4,78 @@ const Upload = require("../../utils/CloudinaryImageUpload");
 const AuthMiddleware = require("../../middlewares/authMiddleware");
 const validationMiddleware = require("../../middlewares/validationMiddleware");
 const RoleMiddleware = require("../../middlewares/roleMiddleware");
-const {createEventValidation } = require("../../validations/authValidation");
+const {createEventValidation, searchEventValidation, getEventsByCategoryValidation, filterEventsByCategoryNameValidation, getAllEventsValidation } = require("../../validations/eventValidation");
 
 const router = express.Router();
 
-router.post("/create-event", AuthMiddleware, 
+// ==============================
+// CREATE EVENT
+// ==============================
+router.post("/create-event", AuthMiddleware,
   RoleMiddleware("admin"),
   Upload.single("banner"),
   validationMiddleware.validate(createEventValidation),
   EventController.createEvent,
 );
-
+// ==============================
+// GET SINGLE EVENT
+// ==============================
 router.get("/single-event/:id", EventController.getSingleEventById);
 
-router.get("/all-events", EventController.getAllEvents);
+// ==============================
+// GET ALL EVENTS WITH PAGINATION
+// ==============================
+router.get("/all-events", AuthMiddleware, validationMiddleware.validate(getAllEventsValidation,"query"), EventController.getAllEvents);
 
-router.get("/events/category/:categoryId", EventController.getEventsByCategory);
+// ==============================
+// GET EVENTS BY CATEGORY
+// ==============================
+router.get("/events/category/:categoryId", AuthMiddleware,
+  validationMiddleware.validate(getEventsByCategoryValidation),
+  EventController.getEventsByCategory
+);
 
+// ==============================
+// UPDATE EVENT
+// ==============================
 router.put(
-  "/update-event/:id", AuthMiddleware, 
+  "/update-event/:id", AuthMiddleware,
   RoleMiddleware("admin"),
   Upload.single("banner"),
   validationMiddleware.validate(createEventValidation),
   EventController.updateEvent,
 );
 
+// ==============================
+// DELETE EVENT
+// ==============================
 router.delete("/delete-event/:id", AuthMiddleware,
   RoleMiddleware("admin"), EventController.deleteEvent,
 );
 
+// ==============================
+// EVENT NOTIFICATION
+// ==============================
 router.get("/notifications", AuthMiddleware,
   RoleMiddleware("admin", "user"), EventController.getNotifications,
 );
+
+// ==============================
+// SEARCH EVENTS
+// ==============================
+router.get("/search-events", AuthMiddleware,
+  validationMiddleware.validate(searchEventValidation, "query"),
+  EventController.searchEvents,
+);
+
+// ==============================
+// FILTER EVENTS
+// ==============================
+router.get("/filter-events", AuthMiddleware,
+  validationMiddleware.validate(filterEventsByCategoryNameValidation, "query"),
+  EventController.filterEventsByCategoryName,
+);
+
+
 
 module.exports = router;

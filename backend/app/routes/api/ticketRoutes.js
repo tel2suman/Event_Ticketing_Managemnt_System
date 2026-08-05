@@ -6,7 +6,7 @@ const RoleMiddleware = require("../../middlewares/roleMiddleware");
 const {
   purchaseTicketValidation,
   checkInTicketValidation,
-} = require("../../validations/authValidation");
+} = require("../../validations/ticketValidation");
 
 const router = express.Router();
 
