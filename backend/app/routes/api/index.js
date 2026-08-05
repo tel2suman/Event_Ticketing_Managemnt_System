@@ -2,8 +2,12 @@ const express = require("express");
 
 const router = express.Router();
 
-//defining routes
+// defining routes
 const authRoutes = require("./authRoutes");
+
+const contactRoutes = require("./contactRoutes");
+
+const newsletterRoutes = require("./newsletterRoutes");
 
 const eventRoutes = require("./eventRoutes");
 
@@ -20,6 +24,10 @@ const paymentRoutes = require("./paymentRoutes");
 const analyticsRoutes = require("./analyticsRoutes");
 
 router.use("/api/v1/auth", authRoutes);
+
+router.use("/api/v1/contact", contactRoutes);
+
+router.use("/api/v1/newsletter", newsletterRoutes);
 
 router.use("/api/v1/event", eventRoutes);
 

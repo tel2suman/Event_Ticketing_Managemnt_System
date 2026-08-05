@@ -6,6 +6,10 @@ const morgan = require("morgan");
 const helmet = require("helmet");
 const cookieParser = require("cookie-parser");
 const multer = require("multer");
+
+const passport = require("passport");
+require("./app/config/passport");
+
 const DatabaseConnection = require("./app/config/db");
 const corsOptions = require("./app/utils/corsOrigin");
 const appRoutes = require("./app/routes/api/index");
@@ -55,6 +59,8 @@ app.use(
 
 // Parse cookies attached to incoming requests.
 app.use(cookieParser());
+
+app.use(passport.initialize());
 
 // Serve application static assets.
 app.use(express.static(path.join(__dirname, "public")));
