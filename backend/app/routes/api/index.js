@@ -7,10 +7,12 @@ const authRoutes = require("./authRoutes");
 
 const eventRoutes = require("./eventRoutes");
 const userRoutes = require("./userRoutes");
+const blogRouter = require("./blogRoutes");
 
 router.use("/api/v1/auth", authRoutes);
 
 router.use("/api/v2/event", eventRoutes);
+router.use("/api/v2/blog", blogRouter);
 
 router.use("/api/v1/user", userRoutes);
 
