@@ -1,5 +1,5 @@
 const Contact = require("../../models/Contact");
-const EmailUtility = require("../../utils/sendEmail");
+const EmailUtility = require("../../utils/SendEmail");
 const HttpStatusCode = require("../../utils/httpStatusCode");
 
 class ContactController {
