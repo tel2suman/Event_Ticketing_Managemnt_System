@@ -31,7 +31,7 @@ const analyticsRoutes = require("./analyticsRoutes");
 router.use("/api/v1/auth", authRoutes);
 
 router.use("/api/v2/event", eventRoutes);
-router.use("/api/v2/blog", blogRouter);
+router.use("/api/v1/blog", blogRouter);
 router.use("/api/v1/contact", contactRoutes);
 
 router.use("/api/v1/newsletter", newsletterRoutes);
