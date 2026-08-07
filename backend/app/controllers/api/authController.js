@@ -9,11 +9,12 @@ const HttpStatusCode = require("../../utils/httpStatusCode");
 
 class AuthController {
   // register
+  // register
   async register(req, res) {
     try {
       const { name, email, password } = req.body;
 
-      const existingUser = await User.findOne({ email });
+      const existingUser = await User.findOne({ email, isDeleted: false });
 
       if (existingUser) {
         return res.status(HttpStatusCode.CONFLICT).json({
@@ -22,20 +23,21 @@ class AuthController {
         });
       }
 
-      // Hash the account password before persisting the user record.
+      const adminExists = await User.exists({
+        role: "admin",
+      });
+
       const hashedPassword = await bcrypt.hash(password, 10);
 
       const user = await User.create({
         name,
         email,
         password: hashedPassword,
-        role: "user",
+        role: adminExists ? "user" : "admin",
       });
 
-      // Generate a cryptographically secure email verification token.
       const verificationToken = crypto.randomBytes(32).toString("hex");
 
-      // Hash the verification token before storing it in the database.
       const hashedVerificationToken = await bcrypt.hash(verificationToken, 10);
 
       await Token.create({
@@ -49,12 +51,21 @@ class AuthController {
         `${process.env.APP_BASE_URL}/api/v1/auth/verify-email` +
         `?token=${verificationToken}&id=${user._id}`;
 
-      await EmailUtility.sendVerificationEmail(user, verificationUrl);
+      let emailSent = true;
+
+      try {
+        await EmailUtility.sendVerificationEmail(user, verificationUrl);
+      } catch (emailError) {
+        emailSent = false;
+
+        console.error("Verification email sending failed:", emailError.message);
+      }
 
       return res.status(HttpStatusCode.CREATED).json({
         success: true,
-        message:
-          "Registration successful. Please verify your email before signing in.",
+        message: emailSent
+          ? "Registration successful. A verification link has been sent to your email."
+          : "Registration successful, but we couldn't send the verification email. Please use the 'Resend Verification Email' option later.",
         data: {
           id: user._id,
           name: user.name,
@@ -88,17 +99,19 @@ class AuthController {
 
       const user = await User.findById(id);
 
+      // If the user exists and is already verified
+      if (user && user.isEmailVerified) {
+        return res.status(HttpStatusCode.SUCCESS).json({
+          success: true,
+          message: "Email is already verified. Please sign in.",
+        });
+      }
+
+      // User doesn't exist
       if (!user) {
         return res.status(HttpStatusCode.NOT_FOUND).json({
           success: false,
           message: "User account not found.",
-        });
-      }
-
-      if (user.isEmailVerified) {
-        return res.status(HttpStatusCode.BAD_REQUEST).json({
-          success: false,
-          message: "Email address has already been verified.",
         });
       }
 
@@ -113,7 +126,8 @@ class AuthController {
       if (!storedToken) {
         return res.status(HttpStatusCode.BAD_REQUEST).json({
           success: false,
-          message: "Verification link is invalid or has expired.",
+          message:
+            "Verification link is invalid or has expired. Please request a new verification email.",
         });
       }
 
@@ -125,7 +139,8 @@ class AuthController {
       if (!isVerificationTokenValid) {
         return res.status(HttpStatusCode.BAD_REQUEST).json({
           success: false,
-          message: "Verification link is invalid or has expired.",
+          message:
+            "Verification link is invalid or has expired. Please request a new verification email.",
         });
       }
 
@@ -133,7 +148,7 @@ class AuthController {
 
       await user.save();
 
-      // Remove the token after successful verification to prevent reuse.
+      // Remove the verification token after successful verification.
       await Token.deleteMany({
         userId: user._id,
         type: "email_verification",
@@ -153,12 +168,74 @@ class AuthController {
     }
   }
 
+  // resendVerificationEmail
+  async resendVerificationEmail(req, res) {
+    try {
+      const { email } = req.body;
+
+      const user = await User.findOne({ email, isDeleted: false });
+
+      const responseMessage = "A verification link has been sent.";
+
+      if (!user) {
+        return res.status(HttpStatusCode.NOT_FOUND).json({
+          success: false,
+          message: "User not found",
+        });
+      }
+
+      if (user.isEmailVerified) {
+        return res.status(HttpStatusCode.BAD_REQUEST).json({
+          success: false,
+          message: "Email address has already been verified.",
+        });
+      }
+
+      // Remove any previously issued email verification tokens.
+      await Token.deleteMany({
+        userId: user._id,
+        type: "email_verification",
+      });
+
+      // Generate a cryptographically secure email verification token.
+      const verificationToken = crypto.randomBytes(32).toString("hex");
+
+      // Hash the verification token before storing it in the database.
+      const hashedVerificationToken = await bcrypt.hash(verificationToken, 10);
+
+      await Token.create({
+        userId: user._id,
+        token: hashedVerificationToken,
+        type: "email_verification",
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      });
+
+      const verificationUrl =
+        `${process.env.APP_BASE_URL}/api/v1/auth/verify-email` +
+        `?token=${verificationToken}&id=${user._id}`;
+
+      await EmailUtility.sendVerificationEmail(user, verificationUrl);
+
+      return res.status(HttpStatusCode.SUCCESS).json({
+        success: true,
+        message: responseMessage,
+      });
+    } catch (error) {
+      console.error("Resend verification email error:", error);
+
+      return res.status(HttpStatusCode.SERVER_ERROR).json({
+        success: false,
+        message: "Unable to resend verification email.",
+      });
+    }
+  }
+
   //login
   async login(req, res) {
     try {
       const { email, password } = req.body;
 
-      const user = await User.findOne({ email }).select(
+      const user = await User.findOne({ email, isDeleted: false }).select(
         "+password +refreshToken",
       );
 
@@ -166,6 +243,14 @@ class AuthController {
         return res.status(HttpStatusCode.UNAUTHORIZED).json({
           success: false,
           message: "Invalid email or password.",
+        });
+      }
+
+      if (user.provider === "google" && !user.password) {
+        return res.status(HttpStatusCode.BAD_REQUEST).json({
+          success: false,
+          message:
+            "This account uses Google Sign-In. Please continue with Google.",
         });
       }
 
@@ -190,7 +275,7 @@ class AuthController {
       const refreshToken = GenerateToken.refreshToken(user);
 
       // Store only the hashed refresh token in the database.
-      user.refreshToken = await bcrypt.hash(refreshToken, 12);
+      user.refreshToken = await bcrypt.hash(refreshToken, 10);
 
       await user.save();
 
@@ -228,6 +313,44 @@ class AuthController {
       return res.status(HttpStatusCode.SERVER_ERROR).json({
         success: false,
         message: "Unable to complete login.",
+      });
+    }
+  }
+
+  async googleLogin(req, res) {
+    try {
+      const user = req.user;
+
+      const accessToken = GenerateToken.accessToken(user);
+
+      const refreshToken = GenerateToken.refreshToken(user);
+
+      user.refreshToken = await bcrypt.hash(refreshToken, 10);
+
+      await user.save();
+
+      res.cookie("accessToken", accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 15 * 60 * 1000,
+      });
+
+      res.cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+
+      return res.redirect(process.env.FRONTEND_URL);
+      // return res.redirect(`${process.env.FRONTEND_URL}/auth/google/success`);
+    } catch (error) {
+      console.error(error);
+
+      return res.status(HttpStatusCode.SERVER_ERROR).json({
+        success: false,
+        message: "Google login failed.",
       });
     }
   }
@@ -316,15 +439,12 @@ class AuthController {
     try {
       const { email } = req.body;
 
-      const user = await User.findOne({ email });
-
-      const responseMessage =
-        "If an account exists for this email, a password reset link has been sent.";
+      const user = await User.findOne({ email, isDeleted: false });
 
       if (!user) {
-        return res.status(HttpStatusCode.SUCCESS).json({
-          success: true,
-          message: responseMessage,
+        return res.status(HttpStatusCode.NOT_FOUND).json({
+          success: false,
+          message: "User does not exist.",
         });
       }
 
@@ -358,7 +478,7 @@ class AuthController {
 
       return res.status(HttpStatusCode.SUCCESS).json({
         success: true,
-        message: responseMessage,
+        message: "A password reset link has been sent.",
       });
     } catch (error) {
       console.error("Forgot password error:", error);
@@ -411,12 +531,23 @@ class AuthController {
         });
       }
 
-      const user = await User.findById(id).select("+password +refreshToken");
+      const user = await User.findOne({ _id: id, isDeleted: false }).select(
+        "+password +refreshToken",
+      );
 
       if (!user) {
         return res.status(HttpStatusCode.NOT_FOUND).json({
           success: false,
           message: "User account not found.",
+        });
+      }
+
+      const isSamePassword = await bcrypt.compare(password, user.password);
+
+      if (isSamePassword) {
+        return res.status(HttpStatusCode.BAD_REQUEST).json({
+          success: false,
+          message: "New password must be different from the current password.",
         });
       }
 

@@ -18,9 +18,27 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
     },
 
+    googleId: {
+      type: String,
+      default: null,
+    },
+
+    provider: {
+      type: String,
+      enum: ["local", "google"],
+      default: "local",
+    },
+
+    avatar: {
+      type: String,
+      default: "",
+    },
+
     password: {
       type: String,
-      required: [true, "Password is required."],
+      required: function () {
+        return this.provider === "local";
+      },
       select: false,
     },
 

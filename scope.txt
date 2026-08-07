@@ -1,0 +1,134 @@
+14. Event Ticketing & Management System
+•	Admin Panel: Create/manage events, pricing tiers, ticket scanning.
+•	Backend: Event CRUD, payment logic, QR ticketing.
+•	React: Event listing, ticket purchase, user ticket dashboard.
+•	UI/UX: Festive layout, event card UX.
+•	HTML: T&Cs, refund policies.
+•	QA: Ticket email, QR testing.
+
+
+Here is the full breakdown, MongoDB schema design, and DFD/ERD plan for the Event Ticketing & Management System using MongoDB.
+
+🧠 Project Overview – Event Ticketing & Management System
+An online platform where:
+•	Users can browse events and purchase tickets
+•	Admins can manage events, pricing, and validate tickets using QR codes
+•	System manages payment flows and ticket generation/delivery
+
+🧩 Functional Modules
+👥 Users
+•	Browse events
+•	Purchase tickets with online payment
+•	View/download QR-coded tickets
+•	Manage upcoming/past ticket purchases
+
+🛠️ Admin
+•	Create/manage events and ticket pricing tiers
+•	Activate/deactivate events
+•	Scan QR tickets (check-in validation)
+•	Track ticket sales and event analytics
+
+📁 MongoDB Collection Design (ERD-style)
+1. users
+{
+  _id: ObjectId,
+  name: "Ananya Paul",
+  email: "ananya@example.com",
+  password: "hashed_pw",
+  role: "user" | "admin",
+  createdAt: ISODate()
+}
+
+2. events
+
+{
+  _id: ObjectId,
+  title: "Startup Summit 2025",
+  description: "A national startup networking event",
+  location: "Bangalore",
+  date: "2025-08-20",
+  time: "18:00",
+  organizer: "TechMeet Pvt Ltd",
+  banner: "startup_summit.png",
+  status: "active" | "inactive",
+  createdBy: ObjectId
+}
+
+3. ticket_tiers
+
+{
+  _id: ObjectId,
+  eventId: ObjectId,
+  name: "VIP",
+  price: 2000,
+  quantityAvailable: 100,
+  benefits: ["Front row", "Free swag"]
+}
+
+4. tickets
+
+{
+  _id: ObjectId,
+  userId: ObjectId,
+  eventId: ObjectId,
+  tierId: ObjectId,
+  ticketCode: "EVT20250720-ABC123",
+  qrCodeUrl: "/tickets/qr/ABC123.png",
+  paymentStatus: "paid" | "pending" | "failed",
+  checkedIn: false,
+  purchasedAt: ISODate()
+}
+
+5. payments
+
+{
+  _id: ObjectId,
+  ticketId: ObjectId,
+  amount: 2000,
+  method: "UPI" | "Razorpay" | "Stripe",
+  transactionId: "TXN0011223344",
+  status: "success" | "failed",
+  paidAt: ISODate()
+}
+
+📊 Level 1 DFD – Event Ticketing & Management System
+🔹 External Entities
+•	User
+•	Admin
+🔹 Processes
+1.	Event Creation / Management
+2.	Ticket Purchase Flow
+3.	QR Generation & Scanning
+4.	Payment Processing
+🔹 Data Stores (Collections)
+•	users
+•	events
+•	ticket_tiers
+•	tickets
+•	payments
+
+🔁 DFD Flow Summary
+•	Admin → Create Events & Pricing → events, ticket_tiers
+•	User → Browse Events → events
+•	User → Purchase Ticket → tickets, payments
+•	System → Generate QR Code → tickets
+•	Admin → Scan QR at entry → updates tickets.checkedIn = true
+
+🧩 UI/UX & Team Role Breakdown
+🔧 React Developers
+•	Event listing with filter/sort
+•	Ticket purchase form with payment gateway integration
+•	QR download and ticket dashboard for users
+🎨 UI/UX Designers
+•	Festive interface with event-themed banners
+•	Ticket layout with QR branding
+•	Tier selector with price comparison layout
+💻 HTML Developers
+•	T&Cs page
+•	Refund & cancellation policy
+•	Help center static page
+🧪 QA
+•	Validate ticket code generation
+•	Test QR scanning with simulated check-ins
+•	Test event deactivation before/after purchase
+

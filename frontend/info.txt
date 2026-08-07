@@ -1,1 +1,0 @@
-all the frontend(React) work is stored in this foler.

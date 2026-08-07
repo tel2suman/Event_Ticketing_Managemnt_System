@@ -1,33 +1,39 @@
 const HttpStatusCode = require("../utils/httpStatusCode");
-
 class ValidationMiddleware {
-  validate(schema) {
-    return async (req, res, next) => {
+  validate(schema, property = "body") {
+
+    return (req, res, next) => {
+
       try {
-        const { error, value } = schema.validate(req.body, {
+        const { error, value } = schema.validate(req[property], {
           abortEarly: false,
           stripUnknown: true,
         });
 
         if (error) {
-          const validationErrors = error.details.map(
-            (detail) => detail.message,
-          );
-
           return res.status(HttpStatusCode.BAD_REQUEST).json({
             success: false,
             message: "Request validation failed.",
-            errors: validationErrors,
+            errors: error.details.map((detail) => detail.message),
           });
         }
 
-        req.body = value;
+        if (property === "body") {
+          req.body = value;
+        } else if (property === "params") {
+          req.params = value;
+        } else if (property === "query") {
+          // Express req.query is read-only in newer versions
+          Object.assign(req.query, value);
+        }
 
-        return next();
+        next();
       } catch (error) {
+        console.error(error);
+
         return res.status(HttpStatusCode.SERVER_ERROR).json({
           success: false,
-          message: "Unable to validate request data.",
+          message: error.message,
         });
       }
     };
@@ -35,3 +41,4 @@ class ValidationMiddleware {
 }
 
 module.exports = new ValidationMiddleware();
+

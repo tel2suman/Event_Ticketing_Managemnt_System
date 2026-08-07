@@ -1,0 +1,3438 @@
+{
+  "info": {
+    "_postman_id": "e4bb9879-d887-43d6-b279-855788b92b58",
+    "name": "Event Ticketing & Management System - Backend API",
+    "description": "Full backend API collection generated from the Node.js/Express + MongoDB backend (auth, events, categories, ticket tiers, tickets, payments/Razorpay, analytics).\n\n## Setup\n1. Set the `baseUrl` collection variable (default `http://localhost:3009`).\n2. Run **Auth > Register User**, verify the email (check console/log for the link if email isn't configured), then run **Auth > Login** — this auto-saves `accessToken`/`refreshToken`/`userId` as collection variables used by every other request.\n3. For admin-only routes, log in with a user whose `role` is `admin` (see `seedAdmin.js` in the backend, or promote a user directly in MongoDB).\n4. Typical happy-path flow: Category > Create Category → Event > Create Event → Ticket Tier > Create Ticket Tier → Ticket > Purchase Ticket → Payment > Create Razorpay Order → (complete checkout on the client / Razorpay test mode) → Payment > Verify Payment.\n\nAll protected routes use collection-level Bearer auth (`{{accessToken}}`); public routes override this with 'No Auth'.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "19470089"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register User",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Geeta Roy\",\n  \"email\": \"geeta@yopmail.com\",\n  \"password\": \"Aa@123456789\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3009/api/v1/auth/register",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3009",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Creates a new user account (role defaults to 'user'). Sends a verification email; the account cannot log in until verified."
+          },
+          "response": []
+        },
+        {
+          "name": "Verify Email",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3009/api/v1/auth/verify-email?token=440f59a0fe0167b55d692e341a25c7874cb85cfab0d0404613af9729eb6c75be&id=6a6caf0af152ef6163381ccb",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3009",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "verify-email"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "440f59a0fe0167b55d692e341a25c7874cb85cfab0d0404613af9729eb6c75be"
+                },
+                {
+                  "key": "id",
+                  "value": "6a6caf0af152ef6163381ccb"
+                }
+              ]
+            },
+            "description": "Verifies the email address using the token & user id sent in the verification email link."
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    if (json.data) {",
+                  "        pm.collectionVariables.set('accessToken', json.data.accessToken);",
+                  "        pm.collectionVariables.set('refreshToken', json.data.refreshToken);",
+                  "        if (json.data.user) {",
+                  "            pm.collectionVariables.set('userId', json.data.user.id);",
+                  "        }",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"shreya@yopmail.com\",\n  \"password\": \"Admin@1234\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3009/api/v1/auth/login",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3009",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Authenticates a verified user. Sets accessToken/refreshToken/userId collection variables automatically from the response."
+          },
+          "response": []
+        },
+        {
+          "name": "Resend Link",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"email\": \"geeta@yopmail.com\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3009/api/v1/auth/resend-verification-email",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3009",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "resend-verification-email"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    if (json.data) {",
+                  "        pm.collectionVariables.set('accessToken', json.data.accessToken);",
+                  "        pm.collectionVariables.set('refreshToken', json.data.refreshToken);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:3009/api/v1/auth/refresh-token",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3009",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "refresh-token"
+              ]
+            },
+            "description": "Rotates the refresh token and issues a new access/refresh token pair. Works via cookie or via refreshToken in the body."
+          },
+          "response": []
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ananya@yopmail.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3009/api/v1/auth/forgot-password",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3009",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "forgot-password"
+              ]
+            },
+            "description": "Requests a password reset email."
+          },
+          "response": []
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"password\": \"Aa@123456789\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3009/api/v1/auth/reset-password?token=f72153153d2246b305ab7a4aed864062cf6426d484dbeacf36119eb57ff4093d&id=6a6caf0af152ef6163381ccb",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3009",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "reset-password"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "f72153153d2246b305ab7a4aed864062cf6426d484dbeacf36119eb57ff4093d"
+                },
+                {
+                  "key": "id",
+                  "value": "6a6caf0af152ef6163381ccb"
+                }
+              ]
+            },
+            "description": "Resets the account password using the token & user id from the password reset email link."
+          },
+          "response": []
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"oldPassword\": \"Aa@12345678\",\n  \"newPassword\": \"Aa@123456789\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3009/api/v1/auth/change-password",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3009",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "change-password"
+              ]
+            },
+            "description": "Changes the logged-in user's password. Requires auth."
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3009/api/v1/auth/logout",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3009",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Invalidates the refresh token and clears auth cookies. Requires auth."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Profile (Auth)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3009/api/v1/auth/profile",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3009",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "profile"
+              ]
+            },
+            "description": "Returns the authenticated user's profile."
+          },
+          "response": []
+        }
+      ],
+      "description": "Registration, login, email verification, password reset/change, token refresh, profile."
+    },
+    {
+      "name": "Category (Admin)",
+      "item": [
+        {
+          "name": "Create Category",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    if (json.data && json.data._id) {",
+                  "        pm.collectionVariables.set('categoryId', json.data._id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoryName\": \"Standup Comedy\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3009/api/v1/category/create-category",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3009",
+              "path": [
+                "api",
+                "v1",
+                "category",
+                "create-category"
+              ]
+            },
+            "description": "Admin only. Sets categoryId collection variable from the response."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Category",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoryName\": \"Solo Performance\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3009/api/v1/category/update-category/6a6db323399cfbb93a415283",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3009",
+              "path": [
+                "api",
+                "v1",
+                "category",
+                "update-category",
+                "6a6db323399cfbb93a415283"
+              ]
+            },
+            "description": "Admin only."
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3009/api/v1/category/all-categories",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3009",
+              "path": [
+                "api",
+                "v1",
+                "category",
+                "all-categories"
+              ]
+            },
+            "description": "Requires auth (admin or user)."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Single Category",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3009/api/v1/category/single-category/6a6db334399cfbb93a415285",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3009",
+              "path": [
+                "api",
+                "v1",
+                "category",
+                "single-category",
+                "6a6db334399cfbb93a415285"
+              ]
+            },
+            "description": "Requires auth (admin or user)."
+          },
+          "response": []
+        },
+        {
+          "name": "Deactivate Category",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3009/api/v1/category/deactivate-category/6a6db32a399cfbb93a415284",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3009",
+              "path": [
+                "api",
+                "v1",
+                "category",
+                "deactivate-category",
+                "6a6db32a399cfbb93a415284"
+              ]
+            },
+            "description": "Admin only."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Category",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3009/api/v1/category/delete-category/6a6db323399cfbb93a415283",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3009",
+              "path": [
+                "api",
+                "v1",
+                "category",
+                "delete-category",
+                "6a6db323399cfbb93a415283"
+              ]
+            },
+            "description": "Admin only."
+          },
+          "response": []
+        }
+      ],
+      "description": "Event category management — mostly admin-only."
+    },
+    {
+      "name": "Event",
+      "item": [
+        {
+          "name": "Create Event",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    if (json.data && json.data._id) {",
+                  "        pm.collectionVariables.set('eventId', json.data._id);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "title",
+                  "value": "Startup Summit 2026",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "A national startup networking event with founders, VCs and product leaders.",
+                  "type": "text"
+                },
+                {
+                  "key": "location",
+                  "value": "Bangalore",
+                  "type": "text"
+                },
+                {
+                  "key": "date",
+                  "value": "2026-08-20",
+                  "type": "text"
+                },
+                {
+                  "key": "time",
+                  "value": "18:00",
+                  "type": "text"
+                },
+                {
+                  "key": "organizer",
+                  "value": "TechMeet Pvt Ltd",
+                  "type": "text"
+                },
+                {
+                  "key": "categoryId",
+                  "value": "{{categoryId}}",
+                  "type": "text"
+                },
+                {
+                  "key": "status",
+                  "value": "active",
+                  "type": "text"
+                },
+                {
+                  "key": "banner",
+                  "type": "file",
+                  "value": null
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/event/create-event",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "event",
+                "create-event"
+              ]
+            },
+            "description": "Admin only. multipart/form-data — attach an image file to the 'banner' field. Sets eventId collection variable from the response."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Single Event",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/event/single-event/{{eventId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "event",
+                "single-event",
+                "{{eventId}}"
+              ]
+            },
+            "description": "Public."
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Events",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/event/all-events?page=1&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "event",
+                "all-events"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Public. Supports listing/filtering of events."
+          },
+          "response": [
+            {
+              "name": "Get All Events",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/event/all-events?page=1&limit=10",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "event",
+                    "all-events"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Cross-Origin-Opener-Policy",
+                  "value": "same-origin"
+                },
+                {
+                  "key": "Cross-Origin-Resource-Policy",
+                  "value": "same-origin"
+                },
+                {
+                  "key": "Origin-Agent-Cluster",
+                  "value": "?1"
+                },
+                {
+                  "key": "Referrer-Policy",
+                  "value": "no-referrer"
+                },
+                {
+                  "key": "Strict-Transport-Security",
+                  "value": "max-age=31536000; includeSubDomains"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-DNS-Prefetch-Control",
+                  "value": "off"
+                },
+                {
+                  "key": "X-Download-Options",
+                  "value": "noopen"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "SAMEORIGIN"
+                },
+                {
+                  "key": "X-Permitted-Cross-Domain-Policies",
+                  "value": "none"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "0"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Origin"
+                },
+                {
+                  "key": "Access-Control-Allow-Credentials",
+                  "value": "true"
+                },
+                {
+                  "key": "RateLimit",
+                  "value": "\"100-in-15min\"; r=97; t=875"
+                },
+                {
+                  "key": "RateLimit-Policy",
+                  "value": "\"100-in-15min\"; q=100; w=900; pk=:YmIwY2Q1MTM2YWU1:"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "2200"
+                },
+                {
+                  "key": "ETag",
+                  "value": "W/\"898-EJ+XPWwIdKf0iMaONAeW8OV/WPw\""
+                },
+                {
+                  "key": "Date",
+                  "value": "Wed, 05 Aug 2026 10:00:08 GMT"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                },
+                {
+                  "key": "Keep-Alive",
+                  "value": "timeout=5"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"success\": true,\n    \"message\": \"Events fetched successfully\",\n    \"pagination\": {\n        \"totalRecords\": 4,\n        \"currentPage\": 1,\n        \"totalPages\": 1,\n        \"perPage\": 10,\n        \"hasNextPage\": false,\n        \"hasPreviousPage\": false\n    },\n    \"data\": [\n        {\n            \"_id\": \"6a702d667cac4df7f46e32aa\",\n            \"title\": \"Stand Up Comedy Night 2026\",\n            \"description\": \"A comedy show with kapil\",\n            \"location\": \"Gurgaon\",\n            \"date\": \"2026-10-11T00:00:00.000Z\",\n            \"time\": \"19:30\",\n            \"organizer\": \"K9 productions & flims\",\n            \"banner\": \"https://res.cloudinary.com/dkgmvphen/image/upload/v1785736550/uploads/oytvezuvaa15pmrk5kdj.jpg\",\n            \"status\": \"active\",\n            \"createdBy\": {\n                \"_id\": \"6a5a5b9a37cbad0267036474\",\n                \"name\": \"System Admin\",\n                \"email\": \"superadmin_0001@yopmail.com\"\n            },\n            \"createdAt\": \"2026-08-03T05:55:50.826Z\",\n            \"categoryName\": \"Comedy\"\n        },\n        {\n            \"_id\": \"6a5fb09facdfb9308ce7a7dd\",\n            \"title\": \"Kumar Sanu Concert 2026\",\n            \"description\": \"A legendary singing concert\",\n            \"location\": \"kolkata\",\n            \"date\": \"2026-09-30T00:00:00.000Z\",\n            \"time\": \"19:30\",\n            \"organizer\": \"Aritist Forum Of Kolkata\",\n            \"banner\": \"https://res.cloudinary.com/dkgmvphen/image/upload/v1784656030/uploads/ansgbj9fwjdjdzanb9hl.png\",\n            \"status\": \"active\",\n            \"createdBy\": {\n                \"_id\": \"6a5a5b9a37cbad0267036474\",\n                \"name\": \"System Admin\",\n                \"email\": \"superadmin_0001@yopmail.com\"\n            },\n            \"createdAt\": \"2026-07-21T17:47:11.866Z\",\n            \"categoryName\": \"Live Music\"\n        },\n        {\n            \"_id\": \"6a5ba9ba3ac75fdf09f72e39\",\n            \"title\": \"Arijit Singh Concert 2026\",\n            \"description\": \"A legendary singing concert\",\n            \"location\": \"kolkata\",\n            \"date\": \"2026-08-15T00:00:00.000Z\",\n            \"time\": \"18:00\",\n            \"organizer\": \"Aritist Forum Of Kolkata\",\n            \"banner\": \"https://res.cloudinary.com/dkgmvphen/image/upload/v1784392121/uploads/aqujkfncfcpy9rcjebly.png\",\n            \"status\": \"active\",\n            \"createdBy\": {\n                \"_id\": \"6a5a5b9a37cbad0267036474\",\n                \"name\": \"System Admin\",\n                \"email\": \"superadmin_0001@yopmail.com\"\n            },\n            \"createdAt\": \"2026-07-18T16:28:42.066Z\"\n        },\n        {\n            \"_id\": \"6a5a8dd37177e17742e040d0\",\n            \"title\": \"Startup Summit 2026\",\n            \"description\": \"A national startup conference\",\n            \"location\": \"Dehradun\",\n            \"date\": \"2026-08-22T00:00:00.000Z\",\n            \"time\": \"12:00\",\n            \"organizer\": \"Doon Businnes School\",\n            \"banner\": \"https://res.cloudinary.com/dkgmvphen/image/upload/v1784389996/uploads/nlo1ru89ebiecwqart7c.jpg\",\n            \"status\": \"active\",\n            \"createdBy\": {\n                \"_id\": \"6a5a5b9a37cbad0267036474\",\n                \"name\": \"System Admin\",\n                \"email\": \"superadmin_0001@yopmail.com\"\n            },\n            \"createdAt\": \"2026-07-17T20:17:23.266Z\"\n        }\n    ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Events By Category",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/event/events/category/{{categoryId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "event",
+                "events",
+                "category",
+                "{{categoryId}}"
+              ]
+            },
+            "description": "Public."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Event",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "title",
+                  "value": "Startup Summit 2026",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "A national startup networking event with founders, VCs and product leaders.",
+                  "type": "text"
+                },
+                {
+                  "key": "location",
+                  "value": "Bangalore",
+                  "type": "text"
+                },
+                {
+                  "key": "date",
+                  "value": "2026-08-20",
+                  "type": "text"
+                },
+                {
+                  "key": "time",
+                  "value": "18:00",
+                  "type": "text"
+                },
+                {
+                  "key": "organizer",
+                  "value": "TechMeet Pvt Ltd",
+                  "type": "text"
+                },
+                {
+                  "key": "categoryId",
+                  "value": "{{categoryId}}",
+                  "type": "text"
+                },
+                {
+                  "key": "status",
+                  "value": "active",
+                  "type": "text"
+                },
+                {
+                  "key": "banner",
+                  "type": "file",
+                  "value": null
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/event/update-event/{{eventId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "event",
+                "update-event",
+                "{{eventId}}"
+              ]
+            },
+            "description": "Admin only. multipart/form-data — same fields as create; attach a new banner file to replace the existing one."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Event",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/event/delete-event/{{eventId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "event",
+                "delete-event",
+                "{{eventId}}"
+              ]
+            },
+            "description": "Admin only."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Notifications",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/event/notifications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "event",
+                "notifications"
+              ]
+            },
+            "description": "Requires auth (admin or user)."
+          },
+          "response": []
+        },
+        {
+          "name": "Search Events",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/event/search-events?title=Kumar Sanu&location=kolkata&date=2026-09-30",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "event",
+                "search-events"
+              ],
+              "query": [
+                {
+                  "key": "title",
+                  "value": "Kumar Sanu"
+                },
+                {
+                  "key": "location",
+                  "value": "kolkata"
+                },
+                {
+                  "key": "date",
+                  "value": "2026-09-30"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Search Events",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/event/search-events?title=Kumar Sanu&location=kolkata&date=2026-09-30",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "event",
+                    "search-events"
+                  ],
+                  "query": [
+                    {
+                      "key": "title",
+                      "value": "Kumar Sanu"
+                    },
+                    {
+                      "key": "location",
+                      "value": "kolkata"
+                    },
+                    {
+                      "key": "date",
+                      "value": "2026-09-30"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Cross-Origin-Opener-Policy",
+                  "value": "same-origin"
+                },
+                {
+                  "key": "Cross-Origin-Resource-Policy",
+                  "value": "same-origin"
+                },
+                {
+                  "key": "Origin-Agent-Cluster",
+                  "value": "?1"
+                },
+                {
+                  "key": "Referrer-Policy",
+                  "value": "no-referrer"
+                },
+                {
+                  "key": "Strict-Transport-Security",
+                  "value": "max-age=31536000; includeSubDomains"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-DNS-Prefetch-Control",
+                  "value": "off"
+                },
+                {
+                  "key": "X-Download-Options",
+                  "value": "noopen"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "SAMEORIGIN"
+                },
+                {
+                  "key": "X-Permitted-Cross-Domain-Policies",
+                  "value": "none"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "0"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Origin"
+                },
+                {
+                  "key": "Access-Control-Allow-Credentials",
+                  "value": "true"
+                },
+                {
+                  "key": "RateLimit",
+                  "value": "\"100-in-15min\"; r=97; t=450"
+                },
+                {
+                  "key": "RateLimit-Policy",
+                  "value": "\"100-in-15min\"; q=100; w=900; pk=:YmIwY2Q1MTM2YWU1:"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "601"
+                },
+                {
+                  "key": "ETag",
+                  "value": "W/\"259-BVRsyiOpa5oZj2vim78R4l+FzOY\""
+                },
+                {
+                  "key": "Date",
+                  "value": "Tue, 04 Aug 2026 07:34:50 GMT"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                },
+                {
+                  "key": "Keep-Alive",
+                  "value": "timeout=5"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"success\": true,\n    \"count\": 1,\n    \"data\": [\n        {\n            \"_id\": \"6a5fb09facdfb9308ce7a7dd\",\n            \"title\": \"Kumar Sanu Concert 2026\",\n            \"description\": \"A legendary singing concert\",\n            \"location\": \"kolkata\",\n            \"date\": \"2026-09-30T00:00:00.000Z\",\n            \"time\": \"19:30\",\n            \"organizer\": \"Aritist Forum Of Kolkata\",\n            \"banner\": \"https://res.cloudinary.com/dkgmvphen/image/upload/v1784656030/uploads/ansgbj9fwjdjdzanb9hl.png\",\n            \"status\": \"active\",\n            \"createdBy\": {\n                \"_id\": \"6a5a5b9a37cbad0267036474\",\n                \"name\": \"System Admin\",\n                \"email\": \"superadmin_0001@yopmail.com\"\n            },\n            \"createdAt\": \"2026-07-21T17:47:11.866Z\",\n            \"category\": {\n                \"_id\": \"6a5fae27f31197f28a95ff30\",\n                \"categoryName\": \"Live Music\"\n            }\n        }\n    ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Filter by Category",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/event/filter-events?categoryName=Live Music",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "event",
+                "filter-events"
+              ],
+              "query": [
+                {
+                  "key": "categoryName",
+                  "value": "Live Music"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Filter by Category",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/event/filter-events?categoryName=Live Music",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "event",
+                    "filter-events"
+                  ],
+                  "query": [
+                    {
+                      "key": "categoryName",
+                      "value": "Live Music"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Cross-Origin-Opener-Policy",
+                  "value": "same-origin"
+                },
+                {
+                  "key": "Cross-Origin-Resource-Policy",
+                  "value": "same-origin"
+                },
+                {
+                  "key": "Origin-Agent-Cluster",
+                  "value": "?1"
+                },
+                {
+                  "key": "Referrer-Policy",
+                  "value": "no-referrer"
+                },
+                {
+                  "key": "Strict-Transport-Security",
+                  "value": "max-age=31536000; includeSubDomains"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-DNS-Prefetch-Control",
+                  "value": "off"
+                },
+                {
+                  "key": "X-Download-Options",
+                  "value": "noopen"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "SAMEORIGIN"
+                },
+                {
+                  "key": "X-Permitted-Cross-Domain-Policies",
+                  "value": "none"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "0"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Origin"
+                },
+                {
+                  "key": "Access-Control-Allow-Credentials",
+                  "value": "true"
+                },
+                {
+                  "key": "RateLimit",
+                  "value": "\"100-in-15min\"; r=97; t=856"
+                },
+                {
+                  "key": "RateLimit-Policy",
+                  "value": "\"100-in-15min\"; q=100; w=900; pk=:YmIwY2Q1MTM2YWU1:"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "595"
+                },
+                {
+                  "key": "ETag",
+                  "value": "W/\"253-tTjDzmEWZAfCdme+r9AQzjXV0GM\""
+                },
+                {
+                  "key": "Date",
+                  "value": "Tue, 04 Aug 2026 08:31:07 GMT"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                },
+                {
+                  "key": "Keep-Alive",
+                  "value": "timeout=5"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"success\": true,\n    \"message\": \"Events fetched successfully\",\n    \"count\": 1,\n    \"data\": [\n        {\n            \"_id\": \"6a5fb09facdfb9308ce7a7dd\",\n            \"title\": \"Kumar Sanu Concert 2026\",\n            \"description\": \"A legendary singing concert\",\n            \"location\": \"kolkata\",\n            \"date\": \"2026-09-30T00:00:00.000Z\",\n            \"time\": \"19:30\",\n            \"organizer\": \"Aritist Forum Of Kolkata\",\n            \"banner\": \"https://res.cloudinary.com/dkgmvphen/image/upload/v1784656030/uploads/ansgbj9fwjdjdzanb9hl.png\",\n            \"status\": \"active\",\n            \"createdBy\": {\n                \"_id\": \"6a5a5b9a37cbad0267036474\",\n                \"name\": \"System Admin\",\n                \"email\": \"superadmin_0001@yopmail.com\"\n            },\n            \"createdAt\": \"2026-07-21T17:47:11.866Z\",\n            \"categoryName\": \"Live Music\"\n        }\n    ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "New Request",
+          "request": {
+            "method": "GET",
+            "header": []
+          },
+          "response": []
+        }
+      ],
+      "description": "Event CRUD. Create/Update are multipart/form-data (banner upload) and admin-only; listing/detail are public."
+    },
+    {
+      "name": "User",
+      "item": [
+        {
+          "name": "Get My Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/user/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "user",
+                "profile"
+              ]
+            },
+            "description": "Requires auth."
+          },
+          "response": []
+        },
+        {
+          "name": "Update My Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ananya Paul Roy\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/user/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "user",
+                "profile"
+              ]
+            },
+            "description": "Requires auth."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete My Profile",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/user/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "user",
+                "profile"
+              ]
+            },
+            "description": "Requires auth. Deletes the logged-in user's own account."
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/user/get",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "user",
+                "get"
+              ]
+            },
+            "description": "Admin only."
+          },
+          "response": []
+        },
+        {
+          "name": "Get User By Id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/user/get/{{targetUserId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "user",
+                "get",
+                "{{targetUserId}}"
+              ]
+            },
+            "description": "Admin only."
+          },
+          "response": []
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Name\",\n  \"role\": \"user\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/user/update/{{targetUserId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "user",
+                "update",
+                "{{targetUserId}}"
+              ]
+            },
+            "description": "Admin only."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/user/delete/{{targetUserId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "user",
+                "delete",
+                "{{targetUserId}}"
+              ]
+            },
+            "description": "Admin only. Soft-deletes a user."
+          },
+          "response": []
+        },
+        {
+          "name": "Restore User",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/user/restore/{{targetUserId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "user",
+                "restore",
+                "{{targetUserId}}"
+              ]
+            },
+            "description": "Admin only. Restores a soft-deleted user."
+          },
+          "response": []
+        }
+      ],
+      "description": "Self-service profile management + admin user management."
+    },
+    {
+      "name": "Cart",
+      "item": [
+        {
+          "name": "Add-To-Cart",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"eventId\": \"6a702d667cac4df7f46e32aa\",\r\n    \"quantity\": \"1\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/cart/add-to-cart",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "cart",
+                "add-to-cart"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Add-To-Cart",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"eventId\": \"6a702d667cac4df7f46e32aa\",\r\n    \"quantity\": \"1\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/cart/add-to-cart",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "cart",
+                    "add-to-cart"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Cross-Origin-Opener-Policy",
+                  "value": "same-origin"
+                },
+                {
+                  "key": "Cross-Origin-Resource-Policy",
+                  "value": "same-origin"
+                },
+                {
+                  "key": "Origin-Agent-Cluster",
+                  "value": "?1"
+                },
+                {
+                  "key": "Referrer-Policy",
+                  "value": "no-referrer"
+                },
+                {
+                  "key": "Strict-Transport-Security",
+                  "value": "max-age=31536000; includeSubDomains"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-DNS-Prefetch-Control",
+                  "value": "off"
+                },
+                {
+                  "key": "X-Download-Options",
+                  "value": "noopen"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "SAMEORIGIN"
+                },
+                {
+                  "key": "X-Permitted-Cross-Domain-Policies",
+                  "value": "none"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "0"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Origin"
+                },
+                {
+                  "key": "Access-Control-Allow-Credentials",
+                  "value": "true"
+                },
+                {
+                  "key": "RateLimit",
+                  "value": "\"100-in-15min\"; r=99; t=900"
+                },
+                {
+                  "key": "RateLimit-Policy",
+                  "value": "\"100-in-15min\"; q=100; w=900; pk=:YmIwY2Q1MTM2YWU1:"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "254"
+                },
+                {
+                  "key": "ETag",
+                  "value": "W/\"fe-XRNb67sRfwO3ZqT9u6ofzCeUCYM\""
+                },
+                {
+                  "key": "Date",
+                  "value": "Tue, 04 Aug 2026 09:48:42 GMT"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                },
+                {
+                  "key": "Keep-Alive",
+                  "value": "timeout=5"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"success\": true,\n    \"message\": \"Event added to cart\",\n    \"data\": {\n        \"userId\": \"6a5a5b9a37cbad0267036474\",\n        \"eventId\": \"6a702d667cac4df7f46e32aa\",\n        \"quantity\": 1,\n        \"_id\": \"6a71b57a2ecf8a184dc5de9a\",\n        \"createdAt\": \"2026-08-04T09:48:42.734Z\",\n        \"updatedAt\": \"2026-08-04T09:48:42.734Z\"\n    }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get User Cart",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"eventId\": \"6a702d667cac4df7f46e32aa\",\r\n    \"quantity\": \"1\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/cart/my-cart",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "cart",
+                "my-cart"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Get User Cart",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": []
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/cart/my-cart",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "cart",
+                    "my-cart"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Cross-Origin-Opener-Policy",
+                  "value": "same-origin"
+                },
+                {
+                  "key": "Cross-Origin-Resource-Policy",
+                  "value": "same-origin"
+                },
+                {
+                  "key": "Origin-Agent-Cluster",
+                  "value": "?1"
+                },
+                {
+                  "key": "Referrer-Policy",
+                  "value": "no-referrer"
+                },
+                {
+                  "key": "Strict-Transport-Security",
+                  "value": "max-age=31536000; includeSubDomains"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-DNS-Prefetch-Control",
+                  "value": "off"
+                },
+                {
+                  "key": "X-Download-Options",
+                  "value": "noopen"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "SAMEORIGIN"
+                },
+                {
+                  "key": "X-Permitted-Cross-Domain-Policies",
+                  "value": "none"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "0"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Origin"
+                },
+                {
+                  "key": "Access-Control-Allow-Credentials",
+                  "value": "true"
+                },
+                {
+                  "key": "RateLimit",
+                  "value": "\"100-in-15min\"; r=99; t=900"
+                },
+                {
+                  "key": "RateLimit-Policy",
+                  "value": "\"100-in-15min\"; q=100; w=900; pk=:YmIwY2Q1MTM2YWU1:"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "378"
+                },
+                {
+                  "key": "ETag",
+                  "value": "W/\"17a-bvfvepmddaezXfVfTWtBp+CreOs\""
+                },
+                {
+                  "key": "Date",
+                  "value": "Tue, 04 Aug 2026 09:57:57 GMT"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                },
+                {
+                  "key": "Keep-Alive",
+                  "value": "timeout=5"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"success\": true,\n    \"count\": 1,\n    \"data\": [\n        {\n            \"_id\": \"6a71b57a2ecf8a184dc5de9a\",\n            \"quantity\": 1,\n            \"createdAt\": \"2026-08-04T09:48:42.734Z\",\n            \"event\": {\n                \"_id\": \"6a702d667cac4df7f46e32aa\",\n                \"title\": \"Stand Up Comedy Night 2026\",\n                \"banner\": \"https://res.cloudinary.com/dkgmvphen/image/upload/v1785736550/uploads/oytvezuvaa15pmrk5kdj.jpg\",\n                \"location\": \"Gurgaon\",\n                \"date\": \"2026-10-11T00:00:00.000Z\",\n                \"time\": \"19:30\"\n            }\n        }\n    ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Cart",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"quantity\": \"3\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/cart/update-cart/{{cartId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "cart",
+                "update-cart",
+                "{{cartId}}"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Update Cart",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"quantity\": \"3\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/cart/update-cart/{{cartId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "cart",
+                    "update-cart",
+                    "{{cartId}}"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Cross-Origin-Opener-Policy",
+                  "value": "same-origin"
+                },
+                {
+                  "key": "Cross-Origin-Resource-Policy",
+                  "value": "same-origin"
+                },
+                {
+                  "key": "Origin-Agent-Cluster",
+                  "value": "?1"
+                },
+                {
+                  "key": "Referrer-Policy",
+                  "value": "no-referrer"
+                },
+                {
+                  "key": "Strict-Transport-Security",
+                  "value": "max-age=31536000; includeSubDomains"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-DNS-Prefetch-Control",
+                  "value": "off"
+                },
+                {
+                  "key": "X-Download-Options",
+                  "value": "noopen"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "SAMEORIGIN"
+                },
+                {
+                  "key": "X-Permitted-Cross-Domain-Policies",
+                  "value": "none"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "0"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Origin"
+                },
+                {
+                  "key": "Access-Control-Allow-Credentials",
+                  "value": "true"
+                },
+                {
+                  "key": "RateLimit",
+                  "value": "\"100-in-15min\"; r=98; t=851"
+                },
+                {
+                  "key": "RateLimit-Policy",
+                  "value": "\"100-in-15min\"; q=100; w=900; pk=:YmIwY2Q1MTM2YWU1:"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "247"
+                },
+                {
+                  "key": "ETag",
+                  "value": "W/\"f7-WdsJHWvoHOvWtPy7chF5tKidrgQ\""
+                },
+                {
+                  "key": "Date",
+                  "value": "Tue, 04 Aug 2026 10:26:34 GMT"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                },
+                {
+                  "key": "Keep-Alive",
+                  "value": "timeout=5"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"success\": true,\n    \"message\": \"Cart updated\",\n    \"data\": {\n        \"_id\": \"6a71b57a2ecf8a184dc5de9a\",\n        \"userId\": \"6a5a5b9a37cbad0267036474\",\n        \"eventId\": \"6a702d667cac4df7f46e32aa\",\n        \"quantity\": 3,\n        \"createdAt\": \"2026-08-04T09:48:42.734Z\",\n        \"updatedAt\": \"2026-08-04T10:26:34.400Z\"\n    }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Remove Cart",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/cart/remove-cart/{{cartId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "cart",
+                "remove-cart",
+                "{{cartId}}"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Remove Cart",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/cart/remove-cart/{{cartId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "cart",
+                    "remove-cart",
+                    "{{cartId}}"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Cross-Origin-Opener-Policy",
+                  "value": "same-origin"
+                },
+                {
+                  "key": "Cross-Origin-Resource-Policy",
+                  "value": "same-origin"
+                },
+                {
+                  "key": "Origin-Agent-Cluster",
+                  "value": "?1"
+                },
+                {
+                  "key": "Referrer-Policy",
+                  "value": "no-referrer"
+                },
+                {
+                  "key": "Strict-Transport-Security",
+                  "value": "max-age=31536000; includeSubDomains"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-DNS-Prefetch-Control",
+                  "value": "off"
+                },
+                {
+                  "key": "X-Download-Options",
+                  "value": "noopen"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "SAMEORIGIN"
+                },
+                {
+                  "key": "X-Permitted-Cross-Domain-Policies",
+                  "value": "none"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "0"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Origin"
+                },
+                {
+                  "key": "Access-Control-Allow-Credentials",
+                  "value": "true"
+                },
+                {
+                  "key": "RateLimit",
+                  "value": "\"100-in-15min\"; r=98; t=882"
+                },
+                {
+                  "key": "RateLimit-Policy",
+                  "value": "\"100-in-15min\"; q=100; w=900; pk=:YmIwY2Q1MTM2YWU1:"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "52"
+                },
+                {
+                  "key": "ETag",
+                  "value": "W/\"34-VTf7YyA5M+3kR69/M+94gTStrC4\""
+                },
+                {
+                  "key": "Date",
+                  "value": "Tue, 04 Aug 2026 11:06:46 GMT"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                },
+                {
+                  "key": "Keep-Alive",
+                  "value": "timeout=5"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"success\": true,\n    \"message\": \"Event removed from cart\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Clear Cart",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/cart/clear-cart",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "cart",
+                "clear-cart"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Clear Cart",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/cart/clear-cart",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "cart",
+                    "clear-cart"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Cross-Origin-Opener-Policy",
+                  "value": "same-origin"
+                },
+                {
+                  "key": "Cross-Origin-Resource-Policy",
+                  "value": "same-origin"
+                },
+                {
+                  "key": "Origin-Agent-Cluster",
+                  "value": "?1"
+                },
+                {
+                  "key": "Referrer-Policy",
+                  "value": "no-referrer"
+                },
+                {
+                  "key": "Strict-Transport-Security",
+                  "value": "max-age=31536000; includeSubDomains"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-DNS-Prefetch-Control",
+                  "value": "off"
+                },
+                {
+                  "key": "X-Download-Options",
+                  "value": "noopen"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "SAMEORIGIN"
+                },
+                {
+                  "key": "X-Permitted-Cross-Domain-Policies",
+                  "value": "none"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "0"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Origin"
+                },
+                {
+                  "key": "Access-Control-Allow-Credentials",
+                  "value": "true"
+                },
+                {
+                  "key": "RateLimit",
+                  "value": "\"100-in-15min\"; r=98; t=748"
+                },
+                {
+                  "key": "RateLimit-Policy",
+                  "value": "\"100-in-15min\"; q=100; w=900; pk=:YmIwY2Q1MTM2YWU1:"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "54"
+                },
+                {
+                  "key": "ETag",
+                  "value": "W/\"36-ivwsWWaXqtAgjTPTxCl7cJTdXe8\""
+                },
+                {
+                  "key": "Date",
+                  "value": "Wed, 05 Aug 2026 07:09:15 GMT"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                },
+                {
+                  "key": "Keep-Alive",
+                  "value": "timeout=5"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"success\": true,\n    \"message\": \"Cart cleared successfully\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "WishList",
+      "item": [
+        {
+          "name": "Add To WishList",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"eventId\": \"6a702d667cac4df7f46e32aa\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/wishlist/add-to-wishlist",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "wishlist",
+                "add-to-wishlist"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Add To WishList",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"eventId\": \"6a702d667cac4df7f46e32aa\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/wishlist/add-to-wishlist",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "wishlist",
+                    "add-to-wishlist"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Cross-Origin-Opener-Policy",
+                  "value": "same-origin"
+                },
+                {
+                  "key": "Cross-Origin-Resource-Policy",
+                  "value": "same-origin"
+                },
+                {
+                  "key": "Origin-Agent-Cluster",
+                  "value": "?1"
+                },
+                {
+                  "key": "Referrer-Policy",
+                  "value": "no-referrer"
+                },
+                {
+                  "key": "Strict-Transport-Security",
+                  "value": "max-age=31536000; includeSubDomains"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-DNS-Prefetch-Control",
+                  "value": "off"
+                },
+                {
+                  "key": "X-Download-Options",
+                  "value": "noopen"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "SAMEORIGIN"
+                },
+                {
+                  "key": "X-Permitted-Cross-Domain-Policies",
+                  "value": "none"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "0"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Origin"
+                },
+                {
+                  "key": "Access-Control-Allow-Credentials",
+                  "value": "true"
+                },
+                {
+                  "key": "RateLimit",
+                  "value": "\"100-in-15min\"; r=99; t=900"
+                },
+                {
+                  "key": "RateLimit-Policy",
+                  "value": "\"100-in-15min\"; q=100; w=900; pk=:YmIwY2Q1MTM2YWU1:"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "266"
+                },
+                {
+                  "key": "ETag",
+                  "value": "W/\"10a-eooIj0N5x48vs3C15OwH5ddfizs\""
+                },
+                {
+                  "key": "Date",
+                  "value": "Wed, 05 Aug 2026 07:50:11 GMT"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                },
+                {
+                  "key": "Keep-Alive",
+                  "value": "timeout=5"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"success\": true,\n    \"message\": \"Event added to wishlist successfully\",\n    \"data\": {\n        \"userId\": \"6a5a5b9a37cbad0267036474\",\n        \"eventId\": \"6a702d667cac4df7f46e32aa\",\n        \"_id\": \"6a72eb333a4719207f6b1762\",\n        \"createdAt\": \"2026-08-05T07:50:11.553Z\",\n        \"updatedAt\": \"2026-08-05T07:50:11.553Z\",\n        \"__v\": 0\n    }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Wishlist",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/wishlist/my-wishlist",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "wishlist",
+                "my-wishlist"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Get Wishlist",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/wishlist/my-wishlist",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "wishlist",
+                    "my-wishlist"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Cross-Origin-Opener-Policy",
+                  "value": "same-origin"
+                },
+                {
+                  "key": "Cross-Origin-Resource-Policy",
+                  "value": "same-origin"
+                },
+                {
+                  "key": "Origin-Agent-Cluster",
+                  "value": "?1"
+                },
+                {
+                  "key": "Referrer-Policy",
+                  "value": "no-referrer"
+                },
+                {
+                  "key": "Strict-Transport-Security",
+                  "value": "max-age=31536000; includeSubDomains"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-DNS-Prefetch-Control",
+                  "value": "off"
+                },
+                {
+                  "key": "X-Download-Options",
+                  "value": "noopen"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "SAMEORIGIN"
+                },
+                {
+                  "key": "X-Permitted-Cross-Domain-Policies",
+                  "value": "none"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "0"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Origin"
+                },
+                {
+                  "key": "Access-Control-Allow-Credentials",
+                  "value": "true"
+                },
+                {
+                  "key": "RateLimit",
+                  "value": "\"100-in-15min\"; r=97; t=882"
+                },
+                {
+                  "key": "RateLimit-Policy",
+                  "value": "\"100-in-15min\"; q=100; w=900; pk=:YmIwY2Q1MTM2YWU1:"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "444"
+                },
+                {
+                  "key": "ETag",
+                  "value": "W/\"1bc-Kmk8ryELDXmHCPrbOfxJwUCJMrM\""
+                },
+                {
+                  "key": "Date",
+                  "value": "Wed, 05 Aug 2026 09:18:59 GMT"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                },
+                {
+                  "key": "Keep-Alive",
+                  "value": "timeout=5"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"success\": true,\n    \"count\": 1,\n    \"data\": [\n        {\n            \"_id\": \"6a72eb333a4719207f6b1762\",\n            \"createdAt\": \"2026-08-05T07:50:11.553Z\",\n            \"event\": {\n                \"_id\": \"6a702d667cac4df7f46e32aa\",\n                \"title\": \"Stand Up Comedy Night 2026\",\n                \"banner\": \"https://res.cloudinary.com/dkgmvphen/image/upload/v1785736550/uploads/oytvezuvaa15pmrk5kdj.jpg\",\n                \"location\": \"Gurgaon\",\n                \"date\": \"2026-10-11T00:00:00.000Z\",\n                \"time\": \"19:30\",\n                \"organizer\": \"K9 productions & flims\",\n                \"status\": \"active\",\n                \"categoryName\": \"Comedy\"\n            }\n        }\n    ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Remove Wishlist",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/wishlist/remove-from-wishlist/{{wishlistId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "wishlist",
+                "remove-from-wishlist",
+                "{{wishlistId}}"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Remove Wishlist",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/wishlist/remove-from-wishlist/{{wishlistId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "wishlist",
+                    "remove-from-wishlist",
+                    "{{wishlistId}}"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Cross-Origin-Opener-Policy",
+                  "value": "same-origin"
+                },
+                {
+                  "key": "Cross-Origin-Resource-Policy",
+                  "value": "same-origin"
+                },
+                {
+                  "key": "Origin-Agent-Cluster",
+                  "value": "?1"
+                },
+                {
+                  "key": "Referrer-Policy",
+                  "value": "no-referrer"
+                },
+                {
+                  "key": "Strict-Transport-Security",
+                  "value": "max-age=31536000; includeSubDomains"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-DNS-Prefetch-Control",
+                  "value": "off"
+                },
+                {
+                  "key": "X-Download-Options",
+                  "value": "noopen"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "SAMEORIGIN"
+                },
+                {
+                  "key": "X-Permitted-Cross-Domain-Policies",
+                  "value": "none"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "0"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Origin"
+                },
+                {
+                  "key": "Access-Control-Allow-Credentials",
+                  "value": "true"
+                },
+                {
+                  "key": "RateLimit",
+                  "value": "\"100-in-15min\"; r=99; t=900"
+                },
+                {
+                  "key": "RateLimit-Policy",
+                  "value": "\"100-in-15min\"; q=100; w=900; pk=:YmIwY2Q1MTM2YWU1:"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "69"
+                },
+                {
+                  "key": "ETag",
+                  "value": "W/\"45-qE8mCWKeqSHjiPrklZkGU0VvfBc\""
+                },
+                {
+                  "key": "Date",
+                  "value": "Wed, 05 Aug 2026 09:33:06 GMT"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                },
+                {
+                  "key": "Keep-Alive",
+                  "value": "timeout=5"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"success\": true,\n    \"message\": \"Event removed from wishlist successfully\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Ticket Tier",
+      "item": [
+        {
+          "name": "Create Ticket Tier",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    if (json.data && json.data._id) {",
+                  "        pm.collectionVariables.set('tierId', json.data._id);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"eventId\": \"{{eventId}}\",\n  \"name\": \"VIP\",\n  \"price\": 2000,\n  \"quantityAvailable\": 100,\n  \"benefits\": [\n    \"Front row\",\n    \"Free swag\"\n  ],\n  \"isActive\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ticket-tier/create-tier",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "ticket-tier",
+                "create-tier"
+              ]
+            },
+            "description": "Admin only. Sets tierId collection variable from the response."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Ticket Tier",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 2200,\n  \"quantityAvailable\": 120\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ticket-tier/update-tier/{{tierId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "ticket-tier",
+                "update-tier",
+                "{{tierId}}"
+              ]
+            },
+            "description": "Admin only. All fields optional."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Tiers By Event (Public)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ticket-tier/tiers/event/{{eventId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "ticket-tier",
+                "tiers",
+                "event",
+                "{{eventId}}"
+              ]
+            },
+            "description": "Public. Returns only active tiers."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Tiers By Event (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ticket-tier/admin/tiers/event/{{eventId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "ticket-tier",
+                "admin",
+                "tiers",
+                "event",
+                "{{eventId}}"
+              ]
+            },
+            "description": "Admin only. Returns all tiers including inactive ones."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Single Ticket Tier",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ticket-tier/single-tier/{{tierId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "ticket-tier",
+                "single-tier",
+                "{{tierId}}"
+              ]
+            },
+            "description": "Public."
+          },
+          "response": []
+        },
+        {
+          "name": "Deactivate Ticket Tier",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ticket-tier/deactivate-tier/{{tierId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "ticket-tier",
+                "deactivate-tier",
+                "{{tierId}}"
+              ]
+            },
+            "description": "Admin only."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Ticket Tier",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ticket-tier/delete-tier/{{tierId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "ticket-tier",
+                "delete-tier",
+                "{{tierId}}"
+              ]
+            },
+            "description": "Admin only."
+          },
+          "response": []
+        }
+      ],
+      "description": "Pricing tiers per event (e.g. VIP/General) — admin-managed, publicly readable."
+    },
+    {
+      "name": "Ticket",
+      "item": [
+        {
+          "name": "Purchase Ticket",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    if (json.data) {",
+                  "        if (json.data.orderId) {",
+                  "            pm.collectionVariables.set('orderId', json.data.orderId);",
+                  "        }",
+                  "        if (json.data.tickets && json.data.tickets.length > 0) {",
+                  "            pm.collectionVariables.set('ticketId', json.data.tickets[0]._id);",
+                  "            pm.collectionVariables.set('ticketCode', json.data.tickets[0].ticketCode);",
+                  "        }",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"eventId\": \"{{eventId}}\",\n  \"tierId\": \"{{tierId}}\",\n  \"quantity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/ticket/purchase",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "ticket",
+                "purchase"
+              ]
+            },
+            "description": "Requires auth. Reserves 1-10 tickets for a tier (payment is separate, see Payment folder). Sets orderId/ticketId/ticketCode collection variables."
+          },
+          "response": []
+        },
+        {
+          "name": "Get My Tickets",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/ticket/my-tickets",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "ticket",
+                "my-tickets"
+              ]
+            },
+            "description": "Requires auth. Returns the logged-in user's upcoming & past tickets."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Single Ticket",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/ticket/single-ticket/{{ticketId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "ticket",
+                "single-ticket",
+                "{{ticketId}}"
+              ]
+            },
+            "description": "Requires auth. Ticket owner or admin only."
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel Ticket",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/ticket/cancel/{{ticketId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "ticket",
+                "cancel",
+                "{{ticketId}}"
+              ]
+            },
+            "description": "Requires auth. Ticket owner only, must be before check-in."
+          },
+          "response": []
+        },
+        {
+          "name": "Check-In Ticket",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticketCode\": \"{{ticketCode}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/ticket/check-in",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "ticket",
+                "check-in"
+              ]
+            },
+            "description": "Admin only. Pass either 'qrData' (raw scanned QR payload) or 'ticketCode' (manual entry)."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Tickets By Event",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/ticket/event/{{eventId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "ticket",
+                "event",
+                "{{eventId}}"
+              ]
+            },
+            "description": "Admin only. Sales + check-in report for an event."
+          },
+          "response": []
+        }
+      ],
+      "description": "Ticket purchase (reservation), user dashboard, cancellation, admin QR/manual check-in, event sales report."
+    },
+    {
+      "name": "Payment",
+      "item": [
+        {
+          "name": "Create Razorpay Order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200 || pm.response.code === 201) {",
+                  "    const json = pm.response.json();",
+                  "    if (json.data && json.data.razorpayOrderId) {",
+                  "        pm.collectionVariables.set('razorpayOrderId', json.data.razorpayOrderId);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"{{orderId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/payment/create-order",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "payment",
+                "create-order"
+              ]
+            },
+            "description": "Requires auth. Creates a Razorpay order for a previously reserved ticket order (from Purchase Ticket)."
+          },
+          "response": []
+        },
+        {
+          "name": "Verify Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"razorpayOrderId\": \"{{razorpayOrderId}}\",\n  \"razorpayPaymentId\": \"{{razorpayPaymentId}}\",\n  \"razorpaySignature\": \"{{razorpaySignature}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/payment/verify",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "payment",
+                "verify"
+              ]
+            },
+            "description": "Requires auth. Called by the client right after Razorpay Checkout completes, to confirm payment server-side."
+          },
+          "response": []
+        },
+        {
+          "name": "Razorpay Webhook",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"payment.captured\",\n  \"payload\": {\n    \"payment\": {\n      \"entity\": {\n        \"id\": \"pay_XXXXXXXXXXXX\",\n        \"order_id\": \"{{razorpayOrderId}}\",\n        \"status\": \"captured\"\n      }\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/payment/webhook",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "payment",
+                "webhook"
+              ]
+            },
+            "description": "Server-to-server endpoint called by Razorpay directly. Authenticated via the 'x-razorpay-signature' header (add manually), not a bearer token. Included here for reference/testing only."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Payment By Order Id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/payment/order/{{orderId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "payment",
+                "order",
+                "{{orderId}}"
+              ]
+            },
+            "description": "Requires auth. Order owner or admin."
+          },
+          "response": []
+        },
+        {
+          "name": "Request Ticket Refund (Self-Service)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/payment/refund-ticket/{{ticketId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "payment",
+                "refund-ticket",
+                "{{ticketId}}"
+              ]
+            },
+            "description": "Requires auth. Ticket owner only."
+          },
+          "response": []
+        },
+        {
+          "name": "Refund Payment (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 2000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/payment/refund/{{paymentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "payment",
+                "refund",
+                "{{paymentId}}"
+              ]
+            },
+            "description": "Admin only. 'amount' is optional — omit for a full refund."
+          },
+          "response": []
+        }
+      ],
+      "description": "Razorpay order creation, payment verification, webhook, refunds."
+    },
+    {
+      "name": "Analytics (Admin)",
+      "item": [
+        {
+          "name": "Platform Overview",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/analytics/overview",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "analytics",
+                "overview"
+              ]
+            },
+            "description": "Admin only. Platform-wide dashboard numbers."
+          },
+          "response": []
+        },
+        {
+          "name": "Per-Event Analytics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/analytics/event/{{eventId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "analytics",
+                "event",
+                "{{eventId}}"
+              ]
+            },
+            "description": "Admin only. Tier-wise sales + check-in breakdown."
+          },
+          "response": []
+        },
+        {
+          "name": "Revenue Trend",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/analytics/revenue-trend?days=30",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "analytics",
+                "revenue-trend"
+              ],
+              "query": [
+                {
+                  "key": "days",
+                  "value": "30"
+                }
+              ]
+            },
+            "description": "Admin only. Daily revenue trend across all events."
+          },
+          "response": []
+        }
+      ],
+      "description": "Admin dashboard analytics: overview, per-event, revenue trend."
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3009"
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    },
+    {
+      "key": "refreshToken",
+      "value": ""
+    },
+    {
+      "key": "userId",
+      "value": ""
+    },
+    {
+      "key": "targetUserId",
+      "value": ""
+    },
+    {
+      "key": "verificationToken",
+      "value": ""
+    },
+    {
+      "key": "resetToken",
+      "value": ""
+    },
+    {
+      "key": "categoryId",
+      "value": ""
+    },
+    {
+      "key": "eventId",
+      "value": ""
+    },
+    {
+      "key": "tierId",
+      "value": ""
+    },
+    {
+      "key": "orderId",
+      "value": ""
+    },
+    {
+      "key": "ticketId",
+      "value": ""
+    },
+    {
+      "key": "ticketCode",
+      "value": ""
+    },
+    {
+      "key": "paymentId",
+      "value": ""
+    },
+    {
+      "key": "razorpayOrderId",
+      "value": ""
+    },
+    {
+      "key": "razorpayPaymentId",
+      "value": ""
+    },
+    {
+      "key": "razorpaySignature",
+      "value": ""
+    },
+    {
+      "key": "cartId",
+      "value": ""
+    },
+    {
+      "key": "wishlistId",
+      "value": ""
+    }
+  ]
+}

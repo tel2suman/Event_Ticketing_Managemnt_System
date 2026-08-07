@@ -36,6 +36,14 @@ const loginValidation = Joi.object({
   }),
 });
 
+// resendVerificationEmail validation
+const resendVerificationEmailValidation = Joi.object({
+  email: Joi.string().trim().lowercase().email().required().messages({
+    "string.empty": "Email is required.",
+    "string.email": "Please provide a valid email address.",
+  }),
+});
+
 // forgotPassword validation
 const forgotPasswordValidation = Joi.object({
   email: Joi.string().trim().lowercase().email().required().messages({
@@ -68,10 +76,13 @@ const changePasswordValidation = Joi.object({
   }),
 });
 
+
+
 module.exports = {
   registerValidation,
   loginValidation,
   forgotPasswordValidation,
   resetPasswordValidation,
   changePasswordValidation,
+  resendVerificationEmailValidation,
 };

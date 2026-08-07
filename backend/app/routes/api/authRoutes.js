@@ -4,9 +4,11 @@ const AuthMiddleware = require("../../middlewares/authMiddleware");
 const ValidationMiddleware = require("../../middlewares/validationMiddleware");
 const { authLimiter } = require("../../utils/limiter");
 
+
 const {
   registerValidation,
   loginValidation,
+  resendVerificationEmailValidation,
   forgotPasswordValidation,
   resetPasswordValidation,
   changePasswordValidation,
@@ -24,6 +26,14 @@ router.post(
 
 // Verify a registered user's email address.
 router.get("/verify-email", AuthController.verifyEmail);
+
+// Resend the email verification link.
+router.post(
+  "/resend-verification-email",
+  authLimiter,
+  ValidationMiddleware.validate(resendVerificationEmailValidation),
+  AuthController.resendVerificationEmail,
+);
 
 // Authenticate a verified user.
 router.post(
