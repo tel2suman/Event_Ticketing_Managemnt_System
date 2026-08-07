@@ -4,7 +4,7 @@ const jwt = require("jsonwebtoken");
 const User = require("../../models/User");
 const Token = require("../../models/Token");
 const GenerateToken = require("../../utils/generateTokens");
-const EmailUtility = require("../../utils/sendEmail");
+const EmailUtility = require("../../utils/SendEmail");
 const HttpStatusCode = require("../../utils/httpStatusCode");
 
 class AuthController {
