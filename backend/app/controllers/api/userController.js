@@ -2,7 +2,7 @@ const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const User = require("../../models/User");
 const HttpStatusCode = require("../../utils/httpStatusCode");
-const EmailUtility = require("../../utils/sendEmail");
+const EmailUtility = require("../../utils/SendEmail");
 const Token = require("../../models/Token");
 
 class UserController {

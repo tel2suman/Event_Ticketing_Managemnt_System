@@ -3,7 +3,7 @@ const crypto = require("crypto");
 const Newsletter = require("../../models/Newsletter");
 const User = require("../../models/User");
 
-const EmailUtility = require("../../utils/sendEmail");
+const EmailUtility = require("../../utils/SendEmail");
 const HttpStatusCode = require("../../utils/httpStatusCode");
 
 class NewsletterController {
