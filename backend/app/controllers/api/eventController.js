@@ -36,13 +36,16 @@ class EventController {
         });
       }
 
-      // Check category exists
-      const category = await Category.findById(categoryId);
+      // Check category exists and is active
+      const category = await Category.findOne({
+        _id: categoryId,
+        isActive: true,
+      });
 
       if (!category) {
         return res.status(HttpStatusCode.NOT_FOUND).json({
           success: false,
-          message: "Category not found",
+          message: "Selected category is inactive or does not exist",
         });
       }
 
@@ -355,9 +358,11 @@ class EventController {
 
   //update event
   async updateEvent(req, res) {
+
     let imageResult = null;
 
     try {
+      
       const { id } = req.params;
 
       const event = await Event.findById(id);
@@ -369,33 +374,82 @@ class EventController {
         });
       }
 
+      // Check the event's current category
+      const currentCategory = await Category.findById(event.categoryId);
+
+      if (!currentCategory || !currentCategory.isActive) {
+        return res.status(HttpStatusCode.BAD_REQUEST).json({
+          success: false,
+          message: "Cannot update event because its category is inactive",
+        });
+      }
+
+      // If category is being changed, new category must be active
+      if (
+        req.body.categoryId !== undefined &&
+        req.body.categoryId !== event.categoryId.toString()
+      ) {
+        const newCategory = await Category.findOne({
+          _id: req.body.categoryId,
+          isActive: true,
+        });
+
+        if (!newCategory) {
+          return res.status(HttpStatusCode.BAD_REQUEST).json({
+            success: false,
+            message: "Selected category is inactive or does not exist",
+          });
+        }
+
+        event.categoryId = newCategory._id;
+      }
+
+      // Update only the fields provided in the request
+      if (req.body.title !== undefined) {
+        event.title = req.body.title.trim();
+      }
+
+      if (req.body.description !== undefined) {
+        event.description = req.body.description;
+      }
+
+      if (req.body.location !== undefined) {
+        event.location = req.body.location;
+      }
+
+      if (req.body.date !== undefined) {
+        event.date = req.body.date;
+      }
+
+      if (req.body.time !== undefined) {
+        event.time = req.body.time;
+      }
+
+      if (req.body.organizer !== undefined) {
+        event.organizer = req.body.organizer;
+      }
+
+      if (req.body.status !== undefined) {
+        event.status = req.body.status;
+      }
+
+      // Update banner if a new image is provided
       if (req.file) {
         // Upload new image first
-        imageResult = await uploadToCloudinary(req.file.buffer);
+        imageResult = await uploadToCloudinary(req.file.path);
 
-        // Delete old Cloudinary image
+        // Delete old image only after new upload succeeds
         if (event.cloudinary_id) {
           await deleteFromCloudinary(event.cloudinary_id);
         }
 
-        // Update new image details
         event.banner = imageResult.secure_url;
         event.cloudinary_id = imageResult.public_id;
       }
 
-      // Update event fields
-
-      event.title = req.body.title || event.title;
-      event.description = req.body.description || event.description;
-      event.location = req.body.location || event.location;
-      event.date = req.body.date || event.date;
-      event.time = req.body.time || event.time;
-      event.organizer = req.body.organizer || event.organizer;
-      event.categoryId = req.body.categoryId || event.categoryId;
-      event.status = req.body.status || event.status;
-
       await event.save();
 
+      // Notification
       await Notification.create({
         title: "Event Updated",
         message: `${event.title} has been updated successfully.`,
@@ -411,15 +465,16 @@ class EventController {
       });
     } catch (error) {
       console.error("Update Event Error:", error);
-      // Cleanup newly uploaded image
-      // if database update fails
+
+      // Remove newly uploaded image if database update fails
       if (imageResult?.public_id) {
         try {
           await deleteFromCloudinary(imageResult.public_id);
-        } catch (cleanupError) {
-          console.error("Cloudinary cleanup failed:", cleanupError);
+        } catch (deleteError) {
+          console.error("Cloudinary cleanup error:", deleteError.message);
         }
       }
+
       return res.status(HttpStatusCode.SERVER_ERROR).json({
         success: false,
         message: error.message,

@@ -49,6 +49,35 @@ const createEventValidation = Joi.object({
   status: Joi.string().valid("active", "inactive").default("active"),
 });
 
+// update Event validation
+const updateEventValidation = Joi.object({
+  title: Joi.string().trim().min(2).max(200).optional().messages({
+    "string.min": "Event title must be at least 2 characters",
+    "string.max": "Event title cannot exceed 200 characters",
+  }),
+
+  description: Joi.string().trim().min(5).optional().messages({
+    "string.min": "Event description must be at least 5 characters",
+  }),
+
+  location: Joi.string().trim().min(2).max(200).optional(),
+
+  date: Joi.date().optional().messages({
+    "date.base": "Invalid event date",
+  }),
+
+  time: Joi.string().trim().optional(),
+
+  organizer: Joi.string().trim().min(2).max(200).optional(),
+
+  categoryId: Joi.string().hex().length(24).optional().messages({
+    "string.hex": "Invalid category ID",
+    "string.length": "Invalid category ID",
+  }),
+
+  status: Joi.string().valid("active", "inactive").optional(),
+});
+
 // search Event validation
 const searchEventValidation = Joi.object({
 
@@ -89,6 +118,7 @@ const getAllEventsValidation = Joi.object({
 
 module.exports = {
   createEventValidation,
+  updateEventValidation,
   searchEventValidation,
   getEventsByCategoryValidation,
   filterEventsByCategoryNameValidation,

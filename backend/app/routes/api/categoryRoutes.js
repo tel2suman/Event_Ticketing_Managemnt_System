@@ -31,6 +31,14 @@ router.get("/all-categories",
 );
 
 // ==============================
+// GET ACTIVE CATEGORIES
+// ==============================
+router.get(
+  "/active-categories",
+  AuthMiddleware, RoleMiddleware("user", "admin"), CategoryController.getActiveCategories,
+);
+
+// ==============================
 // GET SINGLE CATEGORY
 // ==============================
 router.get("/single-category/:categoryId",
@@ -56,6 +64,15 @@ router.put("/deactivate-category/:categoryId",
   CategoryController.deActivateCategory,
 );
 
+// ==============================
+// TOGGLE CATEGORY
+// ==============================
+router.patch(
+  "/toggle-category/:categoryId",
+  AuthMiddleware,
+  RoleMiddleware("admin"),
+  CategoryController.toggleCategory,
+);
 
 
 module.exports = router;
