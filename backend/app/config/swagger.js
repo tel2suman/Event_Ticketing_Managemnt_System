@@ -15,7 +15,16 @@ const swaggerDefinition = {
       name: "Event Ticketing & Management System",
     },
   },
-  servers: [{ url: "http://localhost:5050", description: "Local development" }],
+  servers: [
+    {
+      url: "http://localhost:5050",
+      description: "Local development",
+    },
+    {
+      url: "https://event-ticketing-managemnt-system.onrender.com",
+      description: "Onrender development",
+    },
+  ],
   tags: [
     {
       name: "Auth",
