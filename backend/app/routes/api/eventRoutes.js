@@ -249,7 +249,7 @@ router.delete("/delete-event/:id", AuthMiddleware,
  *       401: { $ref: '#/components/responses/Unauthorized' }
  */
 router.get("/notifications", AuthMiddleware,
-  RoleMiddleware("admin", "user"), EventController.getNotifications,
+   EventController.getNotifications,
 );
 
 // ==============================

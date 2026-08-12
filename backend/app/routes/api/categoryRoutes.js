@@ -115,7 +115,7 @@ router.put("/update-category/:categoryId",
  *       401: { $ref: '#/components/responses/Unauthorized' }
  */
 router.get("/all-categories",
-  AuthMiddleware, RoleMiddleware("admin", "user"), CategoryController.getAllCategories
+  AuthMiddleware, CategoryController.getAllCategories
 );
 
 // ==============================
@@ -200,7 +200,7 @@ router.get(
  *                 data: { $ref: '#/components/schemas/Category' }
  *       404: { $ref: '#/components/responses/NotFound' }
  */
-router.get("/single-category/:categoryId", RoleMiddleware("admin", "user"),
+router.get("/single-category/:categoryId",
   CategoryController.getSingleCategory,
 );
 
