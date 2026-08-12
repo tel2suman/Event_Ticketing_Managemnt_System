@@ -4,16 +4,17 @@ const jwt = require("jsonwebtoken");
 const User = require("../../models/User");
 const Token = require("../../models/Token");
 const GenerateToken = require("../../utils/generateTokens");
-const EmailUtility = require("../../utils/sendEmail");
+const EmailUtility = require("../../utils/SendEmail");
 const HttpStatusCode = require("../../utils/httpStatusCode");
 
 class AuthController {
+  // register
   // register
   async register(req, res) {
     try {
       const { name, email, password } = req.body;
 
-      const existingUser = await User.findOne({ email });
+      const existingUser = await User.findOne({ email, isDeleted: false });
 
       if (existingUser) {
         return res.status(HttpStatusCode.CONFLICT).json({
@@ -22,20 +23,21 @@ class AuthController {
         });
       }
 
-      // Hash the account password before persisting the user record.
+      const adminExists = await User.exists({
+        role: "admin",
+      });
+
       const hashedPassword = await bcrypt.hash(password, 10);
 
       const user = await User.create({
         name,
         email,
         password: hashedPassword,
-        role: "user",
+        role: adminExists ? "user" : "admin",
       });
 
-      // Generate a cryptographically secure email verification token.
       const verificationToken = crypto.randomBytes(32).toString("hex");
 
-      // Hash the verification token before storing it in the database.
       const hashedVerificationToken = await bcrypt.hash(verificationToken, 10);
 
       await Token.create({
@@ -49,12 +51,21 @@ class AuthController {
         `${process.env.APP_BASE_URL}/api/v1/auth/verify-email` +
         `?token=${verificationToken}&id=${user._id}`;
 
-      await EmailUtility.sendVerificationEmail(user, verificationUrl);
+      let emailSent = true;
+
+      try {
+        await EmailUtility.sendVerificationEmail(user, verificationUrl);
+      } catch (emailError) {
+        emailSent = false;
+
+        console.error("Verification email sending failed:", emailError.message);
+      }
 
       return res.status(HttpStatusCode.CREATED).json({
         success: true,
-        message:
-          "Registration successful. A link is sent to your email. Please verify your email before signing in.",
+        message: emailSent
+          ? "Registration successful. A verification link has been sent to your email."
+          : "Registration successful, but we couldn't send the verification email. Please use the 'Resend Verification Email' option later.",
         data: {
           id: user._id,
           name: user.name,
@@ -88,17 +99,19 @@ class AuthController {
 
       const user = await User.findById(id);
 
+      // If the user exists and is already verified
+      if (user && user.isEmailVerified) {
+        return res.status(HttpStatusCode.SUCCESS).json({
+          success: true,
+          message: "Email is already verified. Please sign in.",
+        });
+      }
+
+      // User doesn't exist
       if (!user) {
         return res.status(HttpStatusCode.NOT_FOUND).json({
           success: false,
           message: "User account not found.",
-        });
-      }
-
-      if (user.isEmailVerified) {
-        return res.status(HttpStatusCode.BAD_REQUEST).json({
-          success: false,
-          message: "Email address has already been verified.",
         });
       }
 
@@ -113,7 +126,8 @@ class AuthController {
       if (!storedToken) {
         return res.status(HttpStatusCode.BAD_REQUEST).json({
           success: false,
-          message: "Verification link is invalid or has expired.",
+          message:
+            "Verification link is invalid or has expired. Please request a new verification email.",
         });
       }
 
@@ -125,7 +139,8 @@ class AuthController {
       if (!isVerificationTokenValid) {
         return res.status(HttpStatusCode.BAD_REQUEST).json({
           success: false,
-          message: "Verification link is invalid or has expired.",
+          message:
+            "Verification link is invalid or has expired. Please request a new verification email.",
         });
       }
 
@@ -133,7 +148,7 @@ class AuthController {
 
       await user.save();
 
-      // Remove the token after successful verification to prevent reuse.
+      // Remove the verification token after successful verification.
       await Token.deleteMany({
         userId: user._id,
         type: "email_verification",
@@ -160,8 +175,7 @@ class AuthController {
 
       const user = await User.findOne({ email, isDeleted: false });
 
-      const responseMessage =
-        "A verification link has been sent.";
+      const responseMessage = "A verification link has been sent.";
 
       if (!user) {
         return res.status(HttpStatusCode.NOT_FOUND).json({
@@ -169,7 +183,6 @@ class AuthController {
           message: "User not found",
         });
       }
-
 
       if (user.isEmailVerified) {
         return res.status(HttpStatusCode.BAD_REQUEST).json({
@@ -233,6 +246,14 @@ class AuthController {
         });
       }
 
+      if (user.provider === "google" && !user.password) {
+        return res.status(HttpStatusCode.BAD_REQUEST).json({
+          success: false,
+          message:
+            "This account uses Google Sign-In. Please continue with Google.",
+        });
+      }
+
       const isPasswordValid = await bcrypt.compare(password, user.password);
 
       if (!isPasswordValid) {
@@ -292,6 +313,44 @@ class AuthController {
       return res.status(HttpStatusCode.SERVER_ERROR).json({
         success: false,
         message: "Unable to complete login.",
+      });
+    }
+  }
+
+  async googleLogin(req, res) {
+    try {
+      const user = req.user;
+
+      const accessToken = GenerateToken.accessToken(user);
+
+      const refreshToken = GenerateToken.refreshToken(user);
+
+      user.refreshToken = await bcrypt.hash(refreshToken, 10);
+
+      await user.save();
+
+      res.cookie("accessToken", accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 15 * 60 * 1000,
+      });
+
+      res.cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+
+      return res.redirect(process.env.FRONTEND_URL);
+      // return res.redirect(`${process.env.FRONTEND_URL}/auth/google/success`);
+    } catch (error) {
+      console.error(error);
+
+      return res.status(HttpStatusCode.SERVER_ERROR).json({
+        success: false,
+        message: "Google login failed.",
       });
     }
   }
@@ -381,8 +440,6 @@ class AuthController {
       const { email } = req.body;
 
       const user = await User.findOne({ email, isDeleted: false });
-
-
 
       if (!user) {
         return res.status(HttpStatusCode.NOT_FOUND).json({

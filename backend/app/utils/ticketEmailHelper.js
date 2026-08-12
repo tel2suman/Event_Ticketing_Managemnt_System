@@ -1,6 +1,6 @@
 const Ticket = require("../models/Ticket");
 const User = require("../models/User");
-const EmailUtility = require("./sendEmail");
+const EmailUtility = require("./SendEmail");
 
 // Sends the "here are your tickets" email for a fully-paid order.
 // Deliberately swallows its own errors (logs, doesn't throw) — a failed
