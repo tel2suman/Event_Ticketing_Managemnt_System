@@ -174,7 +174,7 @@ router.get("/all-categories",
  *         description: Internal server error
  */
 router.get(
-  "/active-categories", RoleMiddleware("user", "admin"), CategoryController.getActiveCategories,
+  "/active-categories", CategoryController.getActiveCategories,
 );
 
 // ==============================
