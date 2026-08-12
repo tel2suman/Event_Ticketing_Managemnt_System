@@ -1,4 +1,5 @@
 const allowedOrigins = [
+  "https://event-ticketing-managemnt-system.onrender.com",
   "http://localhost:5050",
   "http://localhost:3009",
   "http://localhost:5173",
