@@ -15,21 +15,63 @@ const swaggerDefinition = {
       name: "Event Ticketing & Management System",
     },
   },
-  servers: [{ url: "http://localhost:3009", description: "Local development" }],
+  servers: [
+    {
+      url: "https://event-ticketing-managemnt-system.onrender.com/",
+      description: "Local development",
+    },
+  ],
   tags: [
-    { name: "Auth", description: "Registration, login, email verification, password reset/change, token refresh, profile, Google OAuth." },
-    { name: "Category", description: "Event category management — mostly admin-only." },
-    { name: "Event", description: "Event CRUD. Create/Update are multipart/form-data (banner upload) and admin-only; listing/detail are public or auth-only." },
-    { name: "User", description: "Self-service profile management + admin user management." },
+    {
+      name: "Auth",
+      description:
+        "Registration, login, email verification, password reset/change, token refresh, profile, Google OAuth.",
+    },
+    {
+      name: "Category",
+      description: "Event category management — mostly admin-only.",
+    },
+    {
+      name: "Event",
+      description:
+        "Event CRUD. Create/Update are multipart/form-data (banner upload) and admin-only; listing/detail are public or auth-only.",
+    },
+    {
+      name: "User",
+      description: "Self-service profile management + admin user management.",
+    },
     { name: "Cart", description: "Shopping cart for events." },
     { name: "Wishlist", description: "Saved/favorited events." },
-    { name: "Ticket Tier", description: "Pricing tiers per event (e.g. VIP/General) — admin-managed, publicly readable." },
-    { name: "Ticket", description: "Ticket purchase (reservation), user dashboard, cancellation, admin QR/manual check-in, event sales report." },
-    { name: "Payment", description: "Razorpay order creation, payment verification, webhook, refunds." },
-    { name: "Blog", description: "Blog CRUD + editorial workflow (draft/publish/schedule/trash/restore)." },
+    {
+      name: "Ticket Tier",
+      description:
+        "Pricing tiers per event (e.g. VIP/General) — admin-managed, publicly readable.",
+    },
+    {
+      name: "Ticket",
+      description:
+        "Ticket purchase (reservation), user dashboard, cancellation, admin QR/manual check-in, event sales report.",
+    },
+    {
+      name: "Payment",
+      description:
+        "Razorpay order creation, payment verification, webhook, refunds.",
+    },
+    {
+      name: "Blog",
+      description:
+        "Blog CRUD + editorial workflow (draft/publish/schedule/trash/restore).",
+    },
     { name: "Newsletter", description: "Newsletter subscription management." },
-    { name: "Contact", description: "Public-facing contact form submission + message history." },
-    { name: "Analytics", description: "Admin dashboard analytics: overview, per-event, revenue trend." },
+    {
+      name: "Contact",
+      description: "Public-facing contact form submission + message history.",
+    },
+    {
+      name: "Analytics",
+      description:
+        "Admin dashboard analytics: overview, per-event, revenue trend.",
+    },
   ],
   components: {
     securitySchemes: {
@@ -141,7 +183,10 @@ const swaggerDefinition = {
           ticketCode: { type: "string" },
           qrCodeUrl: { type: "string", format: "uri" },
           priceAtPurchase: { type: "number" },
-          paymentStatus: { type: "string", enum: ["pending", "paid", "failed"] },
+          paymentStatus: {
+            type: "string",
+            enum: ["pending", "paid", "failed"],
+          },
           checkedIn: { type: "boolean" },
           checkedInAt: { type: "string", format: "date-time", nullable: true },
           cancelledAt: { type: "string", format: "date-time", nullable: true },
@@ -162,7 +207,10 @@ const swaggerDefinition = {
           razorpayOrderId: { type: "string" },
           razorpayPaymentId: { type: "string", nullable: true },
           razorpaySignature: { type: "string", nullable: true },
-          status: { type: "string", enum: ["created", "paid", "failed", "refunded"] },
+          status: {
+            type: "string",
+            enum: ["created", "paid", "failed", "refunded"],
+          },
           paidAt: { type: "string", format: "date-time", nullable: true },
           failureReason: { type: "string", nullable: true },
           refundId: { type: "string", nullable: true },
@@ -248,27 +296,53 @@ const swaggerDefinition = {
     responses: {
       BadRequest: {
         description: "Validation error",
-        content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } },
+        content: {
+          "application/json": {
+            schema: { $ref: "#/components/schemas/ErrorResponse" },
+          },
+        },
       },
       Unauthorized: {
         description: "Missing/invalid/expired access token",
-        content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } },
+        content: {
+          "application/json": {
+            schema: { $ref: "#/components/schemas/ErrorResponse" },
+          },
+        },
       },
       Forbidden: {
-        description: "Authenticated but not allowed to perform this action (e.g. non-admin, not the owner)",
-        content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } },
+        description:
+          "Authenticated but not allowed to perform this action (e.g. non-admin, not the owner)",
+        content: {
+          "application/json": {
+            schema: { $ref: "#/components/schemas/ErrorResponse" },
+          },
+        },
       },
       NotFound: {
         description: "Resource not found",
-        content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } },
+        content: {
+          "application/json": {
+            schema: { $ref: "#/components/schemas/ErrorResponse" },
+          },
+        },
       },
       Conflict: {
-        description: "Conflict with current state (e.g. duplicate, already exists)",
-        content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } },
+        description:
+          "Conflict with current state (e.g. duplicate, already exists)",
+        content: {
+          "application/json": {
+            schema: { $ref: "#/components/schemas/ErrorResponse" },
+          },
+        },
       },
       ServerError: {
         description: "Unexpected server error",
-        content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } },
+        content: {
+          "application/json": {
+            schema: { $ref: "#/components/schemas/ErrorResponse" },
+          },
+        },
       },
     },
   },
