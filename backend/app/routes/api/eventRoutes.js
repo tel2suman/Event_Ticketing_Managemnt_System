@@ -4,7 +4,7 @@ const Upload = require("../../utils/CloudinaryImageUpload");
 const AuthMiddleware = require("../../middlewares/authMiddleware");
 const validationMiddleware = require("../../middlewares/validationMiddleware");
 const RoleMiddleware = require("../../middlewares/roleMiddleware");
-const {createEventValidation, searchEventValidation, getEventsByCategoryValidation, filterEventsByCategoryNameValidation, getAllEventsValidation } = require("../../validations/eventValidation");
+const {createEventValidation, updateEventValidation, searchEventValidation, getEventsByCategoryValidation, filterEventsByCategoryNameValidation, getAllEventsValidation } = require("../../validations/eventValidation");
 
 const router = express.Router();
 
@@ -197,7 +197,7 @@ router.put(
   "/update-event/:id", AuthMiddleware,
   RoleMiddleware("admin"),
   Upload.single("banner"),
-  validationMiddleware.validate(createEventValidation),
+  validationMiddleware.validate(updateEventValidation),
   EventController.updateEvent,
 );
 

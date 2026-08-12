@@ -121,9 +121,36 @@ class CategoryController {
     }
   }
 
+  // get Active category
+  async getActiveCategories(req, res) {
+
+    try {
+      const categories = await Category.find({
+        isActive: true,
+      }).sort({
+        categoryName: 1,
+      });
+
+      return res.status(HttpStatusCode.SUCCESS).json({
+        success: true,
+        count: categories.length,
+        message: "Active categories fetched successfully",
+        data: categories,
+      });
+      
+    } catch (error) {
+      console.error("Get Active Categories Error:", error);
+      return res.status(HttpStatusCode.SERVER_ERROR).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
   // get Single category
   async getSingleCategory(req, res) {
     try {
+
       const { categoryId } = req.params;
 
       const category = await Category.findById(categoryId).select(
@@ -225,6 +252,49 @@ class CategoryController {
       });
     } catch (error) {
       console.error("Deactivate Category Error:", error);
+
+      return res.status(HttpStatusCode.SERVER_ERROR).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  //toggle category
+  async toggleCategory(req, res) {
+    try {
+      const { categoryId } = req.params;
+
+      if (!categoryId) {
+        return res.status(HttpStatusCode.BAD_REQUEST).json({
+          success: false,
+          message: "Category ID is required",
+        });
+      }
+
+      const category = await Category.findById(categoryId);
+
+      if (!category) {
+        return res.status(HttpStatusCode.NOT_FOUND).json({
+          success: false,
+          message: "Category not found",
+        });
+      }
+
+      // Toggle category status
+      category.isActive = !category.isActive;
+
+      await category.save();
+
+      return res.status(HttpStatusCode.SUCCESS).json({
+        success: true,
+        message: category.isActive
+          ? "Category activated successfully"
+          : "Category deactivated successfully",
+        data: category,
+      });
+    } catch (error) {
+      console.error("Toggle Category Error:", error);
 
       return res.status(HttpStatusCode.SERVER_ERROR).json({
         success: false,
