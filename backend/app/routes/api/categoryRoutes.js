@@ -174,8 +174,7 @@ router.get("/all-categories",
  *         description: Internal server error
  */
 router.get(
-  "/active-categories",
-  AuthMiddleware, RoleMiddleware("user", "admin"), CategoryController.getActiveCategories,
+  "/active-categories", RoleMiddleware("user", "admin"), CategoryController.getActiveCategories,
 );
 
 // ==============================
@@ -201,8 +200,7 @@ router.get(
  *                 data: { $ref: '#/components/schemas/Category' }
  *       404: { $ref: '#/components/responses/NotFound' }
  */
-router.get("/single-category/:categoryId",
-  AuthMiddleware, RoleMiddleware("admin", "user"),
+router.get("/single-category/:categoryId", RoleMiddleware("admin", "user"),
   CategoryController.getSingleCategory,
 );
 

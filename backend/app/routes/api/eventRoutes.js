@@ -121,7 +121,7 @@ router.get("/single-event/:id", EventController.getSingleEventById);
  *                   items: { $ref: '#/components/schemas/Event' }
  *       401: { $ref: '#/components/responses/Unauthorized' }
  */
-router.get("/all-events", AuthMiddleware, validationMiddleware.validate(getAllEventsValidation,"query"), EventController.getAllEvents);
+router.get("/all-events", validationMiddleware.validate(getAllEventsValidation,"query"), EventController.getAllEvents);
 
 // ==============================
 // GET EVENTS BY CATEGORY
@@ -148,7 +148,7 @@ router.get("/all-events", AuthMiddleware, validationMiddleware.validate(getAllEv
  *                   items: { $ref: '#/components/schemas/Event' }
  *       404: { $ref: '#/components/responses/NotFound' }
  */
-router.get("/events/category/:categoryId", AuthMiddleware,
+router.get("/events/category/:categoryId",
   validationMiddleware.validate(getEventsByCategoryValidation),
   EventController.getEventsByCategory
 );
@@ -280,7 +280,7 @@ router.get("/notifications", AuthMiddleware,
  *                   items: { $ref: '#/components/schemas/Event' }
  *       400: { $ref: '#/components/responses/BadRequest' }
  */
-router.get("/search-events", AuthMiddleware,
+router.get("/search-events",
   validationMiddleware.validate(searchEventValidation, "query"),
   EventController.searchEvents,
 );
@@ -311,7 +311,7 @@ router.get("/search-events", AuthMiddleware,
  *                   items: { $ref: '#/components/schemas/Event' }
  *       400: { $ref: '#/components/responses/BadRequest' }
  */
-router.get("/filter-events", AuthMiddleware,
+router.get("/filter-events",
   validationMiddleware.validate(filterEventsByCategoryNameValidation, "query"),
   EventController.filterEventsByCategoryName,
 );

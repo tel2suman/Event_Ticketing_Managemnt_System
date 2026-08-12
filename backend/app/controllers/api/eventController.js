@@ -275,6 +275,20 @@ class EventController {
             preserveNullAndEmptyArrays: true,
           },
         },
+
+        // Only events whose category is active
+        {
+          $match: {
+            "category.isActive": true,
+          },
+        },
+
+        // Optional: only active events
+        {
+          $match: {
+            status: "active",
+          },
+        },
         {
           $lookup: {
             from: "users",
@@ -300,6 +314,7 @@ class EventController {
             banner: 1,
             status: 1,
             createdAt: 1,
+            categoryId: "$category._id",
             categoryName: "$category.categoryName",
             createdBy: {
               _id: "$createdBy._id",
@@ -362,7 +377,7 @@ class EventController {
     let imageResult = null;
 
     try {
-      
+
       const { id } = req.params;
 
       const event = await Event.findById(id);
