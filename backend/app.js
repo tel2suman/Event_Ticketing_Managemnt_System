@@ -6,9 +6,11 @@ const morgan = require("morgan");
 const helmet = require("helmet");
 const cookieParser = require("cookie-parser");
 const multer = require("multer");
+const swaggerUi = require("swagger-ui-express");
 const passport = require("./app/config/passport");
 const DatabaseConnection = require("./app/config/db");
 const corsOptions = require("./app/utils/corsOrigin");
+const swaggerDocument = require("./app/config/swagger");
 const appRoutes = require("./app/routes/api/index");
 const { globalLimiter } = require("./app/utils/limiter");
 const startCronJobs = require("./app/cron");
@@ -72,6 +74,20 @@ app.get("/", (req, res) => {
     message: "Event booking API Running Successfully",
   });
 });
+
+// Interactive API documentation (OpenAPI 3.0) — kept in lockstep with the
+// Postman collection at the repo root. Not exposed in production: it maps
+// out every route (including admin-only ones) and lets anyone who finds
+// the URL fire real requests via "Try it out".
+if (process.env.NODE_ENV !== "production") {
+  app.use(
+    "/api-docs",
+    swaggerUi.serve,
+    swaggerUi.setup(swaggerDocument, {
+      customSiteTitle: "Event Ticketing & Management System - API Docs",
+    }),
+  );
+}
 
 // Register backend authentication routes.
 app.use(appRoutes);

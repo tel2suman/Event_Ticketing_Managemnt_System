@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "e4bb9879-d887-43d6-b279-855788b92b58",
     "name": "Event Ticketing & Management System - Backend API",
-    "description": "Full backend API collection generated from the Node.js/Express + MongoDB backend (auth, events, categories, ticket tiers, tickets, payments/Razorpay, analytics).\n\n## Setup\n1. Set the `baseUrl` collection variable (default `http://localhost:3009`).\n2. Run **Auth > Register User**, verify the email (check console/log for the link if email isn't configured), then run **Auth > Login** — this auto-saves `accessToken`/`refreshToken`/`userId` as collection variables used by every other request.\n3. For admin-only routes, log in with a user whose `role` is `admin` (see `seedAdmin.js` in the backend, or promote a user directly in MongoDB).\n4. Typical happy-path flow: Category > Create Category → Event > Create Event → Ticket Tier > Create Ticket Tier → Ticket > Purchase Ticket → Payment > Create Razorpay Order → (complete checkout on the client / Razorpay test mode) → Payment > Verify Payment.\n\nAll protected routes use collection-level Bearer auth (`{{accessToken}}`); public routes override this with 'No Auth'.",
+    "description": "Full backend API collection generated from the Node.js/Express + MongoDB backend (auth, events, categories, cart, wishlist, ticket tiers, tickets, payments/Razorpay, blog, newsletter, contact, analytics).\n\n## Setup\n1. Set the `baseUrl` collection variable (default `http://localhost:3009`).\n2. Run **Auth > Register User**, verify the email (check console/log for the link if email isn't configured), then run **Auth > Login** — this auto-saves `accessToken`/`refreshToken`/`userId` as collection variables used by every other request.\n3. For admin-only routes, log in with a user whose `role` is `admin` (see `seedAdmin.js` in the backend, or promote a user directly in MongoDB).\n4. Typical happy-path flow: Category > Create Category → Event > Create Event → Ticket Tier > Create Ticket Tier → Ticket > Purchase Ticket → Payment > Create Razorpay Order → (complete checkout on the client / Razorpay test mode) → Payment > Verify Payment.\n\nAll protected routes use collection-level Bearer auth (`{{accessToken}}`); public routes override this with 'No Auth'.\n\n## Payment routes were failing for the whole team — root cause & fix\nThe issue wasn't in the payment code itself. `app/config/passport.js` unconditionally constructed a Google OAuth `Strategy`, and `passport-google-oauth20` throws synchronously at require time if `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`/`GOOGLE_CALLBACK_URL` aren't set. Since nobody had Google OAuth wired up locally (and no route even uses it — `googleLogin` in authController is orphaned), the **entire server crashed on boot** for anyone without those three env vars, taking every route down with it, payments included. Fixed by only registering the Google strategy when those env vars are actually present. Verified by restarting the server and exercising Payment > Create Razorpay Order and Payment > Verify Payment end-to-end against Razorpay test-mode keys — both now return 200/201 as expected.\n\nSeparately (not code bugs, but will also block testing if unset in your local `.env`): `RAZORPAY_WEBHOOK_SECRET` is read by `verifyWebhookSignature` but was missing from `.env.example` — added. And this repo's own `.env` had a `CLOUDINARY_API_SECRET` that doesn't match its `CLOUDINARY_API_KEY`/`CLOUDINARY_CLOUD_NAME` (confirmed via a direct `cloudinary.api.ping()` call, which returned `api_secret mismatch`) — that blocks event-banner and ticket-QR uploads specifically, not the payment routes themselves; get a fresh secret from the Cloudinary dashboard if you hit upload errors.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "19470089"
   },
@@ -33,12 +33,10 @@
               }
             },
             "url": {
-              "raw": "http://localhost:3009/api/v1/auth/register",
-              "protocol": "http",
+              "raw": "{{baseUrl}}/api/v1/auth/register",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "3009",
               "path": [
                 "api",
                 "v1",
@@ -59,12 +57,10 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "http://localhost:3009/api/v1/auth/verify-email?token=440f59a0fe0167b55d692e341a25c7874cb85cfab0d0404613af9729eb6c75be&id=6a6caf0af152ef6163381ccb",
-              "protocol": "http",
+              "raw": "{{baseUrl}}/api/v1/auth/verify-email?token=440f59a0fe0167b55d692e341a25c7874cb85cfab0d0404613af9729eb6c75be&id=6a6caf0af152ef6163381ccb",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "3009",
               "path": [
                 "api",
                 "v1",
@@ -131,12 +127,10 @@
               }
             },
             "url": {
-              "raw": "http://localhost:3009/api/v1/auth/login",
-              "protocol": "http",
+              "raw": "{{baseUrl}}/api/v1/auth/login",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "3009",
               "path": [
                 "api",
                 "v1",
@@ -163,12 +157,10 @@
               }
             },
             "url": {
-              "raw": "http://localhost:3009/api/v1/auth/resend-verification-email",
-              "protocol": "http",
+              "raw": "{{baseUrl}}/api/v1/auth/resend-verification-email",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "3009",
               "path": [
                 "api",
                 "v1",
@@ -212,12 +204,10 @@
               }
             ],
             "url": {
-              "raw": "http://localhost:3009/api/v1/auth/refresh-token",
-              "protocol": "http",
+              "raw": "{{baseUrl}}/api/v1/auth/refresh-token",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "3009",
               "path": [
                 "api",
                 "v1",
@@ -252,12 +242,10 @@
               }
             },
             "url": {
-              "raw": "http://localhost:3009/api/v1/auth/forgot-password",
-              "protocol": "http",
+              "raw": "{{baseUrl}}/api/v1/auth/forgot-password",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "3009",
               "path": [
                 "api",
                 "v1",
@@ -292,12 +280,10 @@
               }
             },
             "url": {
-              "raw": "http://localhost:3009/api/v1/auth/reset-password?token=f72153153d2246b305ab7a4aed864062cf6426d484dbeacf36119eb57ff4093d&id=6a6caf0af152ef6163381ccb",
-              "protocol": "http",
+              "raw": "{{baseUrl}}/api/v1/auth/reset-password?token=f72153153d2246b305ab7a4aed864062cf6426d484dbeacf36119eb57ff4093d&id=6a6caf0af152ef6163381ccb",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "3009",
               "path": [
                 "api",
                 "v1",
@@ -339,12 +325,10 @@
               }
             },
             "url": {
-              "raw": "http://localhost:3009/api/v1/auth/change-password",
-              "protocol": "http",
+              "raw": "{{baseUrl}}/api/v1/auth/change-password",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "3009",
               "path": [
                 "api",
                 "v1",
@@ -362,12 +346,10 @@
             "method": "POST",
             "header": [],
             "url": {
-              "raw": "http://localhost:3009/api/v1/auth/logout",
-              "protocol": "http",
+              "raw": "{{baseUrl}}/api/v1/auth/logout",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "3009",
               "path": [
                 "api",
                 "v1",
@@ -385,12 +367,10 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "http://localhost:3009/api/v1/auth/profile",
-              "protocol": "http",
+              "raw": "{{baseUrl}}/api/v1/auth/profile",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "3009",
               "path": [
                 "api",
                 "v1",
@@ -401,9 +381,64 @@
             "description": "Returns the authenticated user's profile."
           },
           "response": []
+        },
+        {
+          "name": "Google Login (Open In Browser)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/google",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "google"
+              ]
+            },
+            "description": "Public. Not a normal API call — open this URL in a browser tab (not via Postman's Send button) to kick off the Google OAuth consent flow. Redirects to Google, then Google redirects back to 'Google OAuth Callback' below. Only registered if GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET/GOOGLE_CALLBACK_URL are set on the server; otherwise returns 503."
+          },
+          "response": []
+        },
+        {
+          "name": "Google OAuth Callback (Reference Only)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/google/callback?code=REPLACE_WITH_CODE_FROM_GOOGLE",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "google",
+                "callback"
+              ],
+              "query": [
+                {
+                  "key": "code",
+                  "value": "REPLACE_WITH_CODE_FROM_GOOGLE"
+                }
+              ]
+            },
+            "description": "Public. Never call this directly — Google's own redirect after 'Google Login' hits this URL with a real authorization code. On success it sets accessToken/refreshToken cookies and redirects to FRONTEND_URL. Must match the exact 'Authorized redirect URI' configured on the Google Cloud OAuth client, or Google returns redirect_uri_mismatch. Included here for documentation only."
+          },
+          "response": []
         }
       ],
-      "description": "Registration, login, email verification, password reset/change, token refresh, profile."
+      "description": "Registration, login, email verification, password reset/change, token refresh, profile, Google OAuth."
     },
     {
       "name": "Category (Admin)",
@@ -446,12 +481,10 @@
               }
             },
             "url": {
-              "raw": "http://localhost:3009/api/v1/category/create-category",
-              "protocol": "http",
+              "raw": "{{baseUrl}}/api/v1/category/create-category",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "3009",
               "path": [
                 "api",
                 "v1",
@@ -483,18 +516,16 @@
               }
             },
             "url": {
-              "raw": "http://localhost:3009/api/v1/category/update-category/6a6db323399cfbb93a415283",
-              "protocol": "http",
+              "raw": "{{baseUrl}}/api/v1/category/update-category/{{categoryId}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "3009",
               "path": [
                 "api",
                 "v1",
                 "category",
                 "update-category",
-                "6a6db323399cfbb93a415283"
+                "{{categoryId}}"
               ]
             },
             "description": "Admin only."
@@ -507,12 +538,10 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "http://localhost:3009/api/v1/category/all-categories",
-              "protocol": "http",
+              "raw": "{{baseUrl}}/api/v1/category/all-categories",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "3009",
               "path": [
                 "api",
                 "v1",
@@ -530,18 +559,16 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "http://localhost:3009/api/v1/category/single-category/6a6db334399cfbb93a415285",
-              "protocol": "http",
+              "raw": "{{baseUrl}}/api/v1/category/single-category/{{categoryId}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "3009",
               "path": [
                 "api",
                 "v1",
                 "category",
                 "single-category",
-                "6a6db334399cfbb93a415285"
+                "{{categoryId}}"
               ]
             },
             "description": "Requires auth (admin or user)."
@@ -554,18 +581,16 @@
             "method": "PUT",
             "header": [],
             "url": {
-              "raw": "http://localhost:3009/api/v1/category/deactivate-category/6a6db32a399cfbb93a415284",
-              "protocol": "http",
+              "raw": "{{baseUrl}}/api/v1/category/deactivate-category/{{categoryId}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "3009",
               "path": [
                 "api",
                 "v1",
                 "category",
                 "deactivate-category",
-                "6a6db32a399cfbb93a415284"
+                "{{categoryId}}"
               ]
             },
             "description": "Admin only."
@@ -578,18 +603,16 @@
             "method": "DELETE",
             "header": [],
             "url": {
-              "raw": "http://localhost:3009/api/v1/category/delete-category/6a6db323399cfbb93a415283",
-              "protocol": "http",
+              "raw": "{{baseUrl}}/api/v1/category/delete-category/{{categoryId}}",
               "host": [
-                "localhost"
+                "{{baseUrl}}"
               ],
-              "port": "3009",
               "path": [
                 "api",
                 "v1",
                 "category",
                 "delete-category",
-                "6a6db323399cfbb93a415283"
+                "{{categoryId}}"
               ]
             },
             "description": "Admin only."
@@ -1311,14 +1334,6 @@
               "body": "{\n    \"success\": true,\n    \"message\": \"Events fetched successfully\",\n    \"count\": 1,\n    \"data\": [\n        {\n            \"_id\": \"6a5fb09facdfb9308ce7a7dd\",\n            \"title\": \"Kumar Sanu Concert 2026\",\n            \"description\": \"A legendary singing concert\",\n            \"location\": \"kolkata\",\n            \"date\": \"2026-09-30T00:00:00.000Z\",\n            \"time\": \"19:30\",\n            \"organizer\": \"Aritist Forum Of Kolkata\",\n            \"banner\": \"https://res.cloudinary.com/dkgmvphen/image/upload/v1784656030/uploads/ansgbj9fwjdjdzanb9hl.png\",\n            \"status\": \"active\",\n            \"createdBy\": {\n                \"_id\": \"6a5a5b9a37cbad0267036474\",\n                \"name\": \"System Admin\",\n                \"email\": \"superadmin_0001@yopmail.com\"\n            },\n            \"createdAt\": \"2026-07-21T17:47:11.866Z\",\n            \"categoryName\": \"Live Music\"\n        }\n    ]\n}"
             }
           ]
-        },
-        {
-          "name": "New Request",
-          "request": {
-            "method": "GET",
-            "header": []
-          },
-          "response": []
         }
       ],
       "description": "Event CRUD. Create/Update are multipart/form-data (banner upload) and admin-only; listing/detail are public."
@@ -3271,6 +3286,525 @@
       "description": "Razorpay order creation, payment verification, webhook, refunds."
     },
     {
+      "name": "Blog",
+      "item": [
+        {
+          "name": "Create Blog",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    if (json.data && json.data._id) {",
+                  "        pm.collectionVariables.set('blogId', json.data._id);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "title",
+                  "value": "Top 10 Tips For A Great Event Experience",
+                  "type": "text"
+                },
+                {
+                  "key": "excerpt",
+                  "value": "A quick rundown of what separates a forgettable event from one people talk about for years.",
+                  "type": "text"
+                },
+                {
+                  "key": "content",
+                  "value": "From venue selection to post-event follow-up, here is a complete guide covering everything organizers need to know to run a smooth, memorable event from start to finish.",
+                  "type": "text"
+                },
+                {
+                  "key": "category",
+                  "value": "Event Planning",
+                  "type": "text"
+                },
+                {
+                  "key": "status",
+                  "value": "Draft",
+                  "type": "text"
+                },
+                {
+                  "key": "featuredImage",
+                  "type": "file",
+                  "value": null
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/blog/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "blog",
+                "create"
+              ]
+            },
+            "description": "Requires auth. multipart/form-data — attach an image file to 'featuredImage' (optional, defaults to a placeholder). Sets blogId collection variable from the response."
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Blogs (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/blog",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "blog"
+              ]
+            },
+            "description": "Admin only. Returns all non-deleted blogs regardless of status."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Published Blogs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/blog/published",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "blog",
+                "published"
+              ]
+            },
+            "description": "Requires auth. Returns only blogs with status 'Published'."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Single Blog",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/blog/{{blogId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "blog",
+                "{{blogId}}"
+              ]
+            },
+            "description": "Requires auth."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Blog",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "title",
+                  "value": "Top 10 Tips For A Great Event Experience (Updated)",
+                  "type": "text"
+                },
+                {
+                  "key": "excerpt",
+                  "value": "A quick, updated rundown of what separates a forgettable event from one people talk about for years.",
+                  "type": "text"
+                },
+                {
+                  "key": "content",
+                  "value": "Updated: from venue selection to post-event follow-up, here is a complete guide covering everything organizers need to know to run a smooth, memorable event.",
+                  "type": "text"
+                },
+                {
+                  "key": "category",
+                  "value": "Event Planning",
+                  "type": "text"
+                },
+                {
+                  "key": "featuredImage",
+                  "type": "file",
+                  "value": null
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/blog/update/{{blogId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "blog",
+                "update",
+                "{{blogId}}"
+              ]
+            },
+            "description": "Admin only. multipart/form-data — all fields optional, attach a new 'featuredImage' file to replace the existing one."
+          },
+          "response": []
+        },
+        {
+          "name": "Save As Draft",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/blog/draft/{{blogId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "blog",
+                "draft",
+                "{{blogId}}"
+              ]
+            },
+            "description": "Admin only. Sets the blog's status back to 'Draft'."
+          },
+          "response": []
+        },
+        {
+          "name": "Publish Blog",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/blog/publish/{{blogId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "blog",
+                "publish",
+                "{{blogId}}"
+              ]
+            },
+            "description": "Admin only. Sets status to 'Published' and stamps publishDate with now."
+          },
+          "response": []
+        },
+        {
+          "name": "Schedule Blog",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"publishDate\": \"2026-12-25T09:00:00.000Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/blog/schedule/{{blogId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "blog",
+                "schedule",
+                "{{blogId}}"
+              ]
+            },
+            "description": "Admin only. Sets status to 'Scheduled' with the given future publishDate."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Blog (Soft)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/blog/delete/{{blogId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "blog",
+                "delete",
+                "{{blogId}}"
+              ]
+            },
+            "description": "Admin only. Soft-deletes the blog (moves it to trash)."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Trashed Blogs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/blog/trash",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "blog",
+                "trash"
+              ]
+            },
+            "description": "Admin only. Lists soft-deleted blogs."
+          },
+          "response": []
+        },
+        {
+          "name": "Restore Blog",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/blog/restore/{{blogId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "blog",
+                "restore",
+                "{{blogId}}"
+              ]
+            },
+            "description": "Admin only. Restores a soft-deleted blog out of trash."
+          },
+          "response": []
+        },
+        {
+          "name": "Permanent Delete Blog",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/blog/permanent-delete/{{blogId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "blog",
+                "permanent-delete",
+                "{{blogId}}"
+              ]
+            },
+            "description": "Admin only. Permanently removes the blog document — cannot be undone."
+          },
+          "response": []
+        }
+      ],
+      "description": "Blog CRUD + editorial workflow (draft/publish/schedule/trash/restore). Create/Update are multipart/form-data (featuredImage upload)."
+    },
+    {
+      "name": "Newsletter",
+      "item": [
+        {
+          "name": "Subscribe",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/newsletter/subscribe",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "newsletter",
+                "subscribe"
+              ]
+            },
+            "description": "Requires auth. Subscribes the logged-in user's account email to the newsletter."
+          },
+          "response": []
+        },
+        {
+          "name": "Unsubscribe",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/newsletter/unsubscribe",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "newsletter",
+                "unsubscribe"
+              ]
+            },
+            "description": "Requires auth. Unsubscribes the logged-in user."
+          },
+          "response": []
+        },
+        {
+          "name": "Unsubscribe By Token (Link)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/newsletter/unsubscribe-link?token=REPLACE_WITH_TOKEN_FROM_EMAIL",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "newsletter",
+                "unsubscribe-link"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "REPLACE_WITH_TOKEN_FROM_EMAIL"
+                }
+              ]
+            },
+            "description": "Public. One-click unsubscribe link sent in newsletter emails — token identifies the subscription."
+          },
+          "response": []
+        },
+        {
+          "name": "Subscription Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/newsletter/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "newsletter",
+                "status"
+              ]
+            },
+            "description": "Requires auth. Returns whether the logged-in user is currently subscribed."
+          },
+          "response": []
+        }
+      ],
+      "description": "Newsletter subscription management — subscribe/unsubscribe/status for the logged-in user, plus a public token-based unsubscribe link."
+    },
+    {
+      "name": "Contact",
+      "item": [
+        {
+          "name": "Send Contact Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Geeta Roy\",\n  \"email\": \"geeta@yopmail.com\",\n  \"phone\": \"9876543210\",\n  \"message\": \"Hi, I had a question about group bookings for the Kumar Sanu concert — do you offer any discount for parties of 10 or more people?\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/contact",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "contact"
+              ]
+            },
+            "description": "Requires auth. 'phone' must be a 10-digit Indian mobile number (starts 6-9); 'message' must be 50-1000 characters."
+          },
+          "response": []
+        },
+        {
+          "name": "My Contact Messages",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/contact/my-messages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "contact",
+                "my-messages"
+              ]
+            },
+            "description": "Requires auth. Returns the logged-in user's previously sent contact messages."
+          },
+          "response": []
+        }
+      ],
+      "description": "Public-facing contact form submission + the logged-in user's own message history."
+    },
+    {
       "name": "Analytics (Admin)",
       "item": [
         {
@@ -3432,6 +3966,10 @@
     },
     {
       "key": "wishlistId",
+      "value": ""
+    },
+    {
+      "key": "blogId",
       "value": ""
     }
   ]
