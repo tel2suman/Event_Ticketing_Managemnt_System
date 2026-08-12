@@ -22,7 +22,7 @@ const swaggerDefinition = {
     },
     {
       url: "https://event-ticketing-managemnt-system.onrender.com",
-      description: "Onrender development",
+      description: "OnRender development",
     },
   ],
   tags: [
