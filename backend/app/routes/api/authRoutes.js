@@ -80,7 +80,7 @@ router.post(
  *       400: { $ref: '#/components/responses/BadRequest' }
  */
 // Verify a registered user's email address.
-router.get("/verify-email", AuthController.verifyEmail);
+// router.get("/verify-email", AuthController.verifyEmail);
 
 /**
  * @swagger
@@ -107,12 +107,12 @@ router.get("/verify-email", AuthController.verifyEmail);
  *       400: { $ref: '#/components/responses/BadRequest' }
  */
 // Resend the email verification link.
-router.post(
-  "/resend-verification-email",
-  authLimiter,
-  ValidationMiddleware.validate(resendVerificationEmailValidation),
-  AuthController.resendVerificationEmail,
-);
+// router.post(
+//   "/resend-verification-email",
+//   authLimiter,
+//   ValidationMiddleware.validate(resendVerificationEmailValidation),
+//   AuthController.resendVerificationEmail,
+// );
 
 /**
  * @swagger
@@ -215,12 +215,12 @@ router.post("/refresh-token", authLimiter, AuthController.refreshToken);
  *       404: { $ref: '#/components/responses/NotFound' }
  */
 // Request a password reset link.
-router.post(
-  "/forgot-password",
-  authLimiter,
-  ValidationMiddleware.validate(forgotPasswordValidation),
-  AuthController.forgotPassword,
-);
+// router.post(
+//   "/forgot-password",
+//   authLimiter,
+//   ValidationMiddleware.validate(forgotPasswordValidation),
+//   AuthController.forgotPassword,
+// );
 
 /**
  * @swagger
@@ -250,12 +250,12 @@ router.post(
  *       400: { $ref: '#/components/responses/BadRequest' }
  */
 // Reset the account password using a valid password reset token.
-router.patch(
-  "/reset-password",
-  authLimiter,
-  ValidationMiddleware.validate(resetPasswordValidation),
-  AuthController.resetPassword,
-);
+// router.patch(
+//   "/reset-password",
+//   authLimiter,
+//   ValidationMiddleware.validate(resetPasswordValidation),
+//   AuthController.resetPassword,
+// );
 
 /**
  * @swagger
@@ -282,12 +282,12 @@ router.patch(
  *       400: { $ref: '#/components/responses/BadRequest' }
  *       401: { $ref: '#/components/responses/Unauthorized' }
  */
-router.patch(
-  "/change-password",
-  AuthMiddleware,
-  ValidationMiddleware.validate(changePasswordValidation),
-  AuthController.changePassword,
-);
+// router.patch(
+//   "/change-password",
+//   AuthMiddleware,
+//   ValidationMiddleware.validate(changePasswordValidation),
+//   AuthController.changePassword,
+// );
 
 /**
  * @swagger

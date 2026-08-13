@@ -12,6 +12,7 @@ const newsletterRoutes = require("./newsletterRoutes");
 const eventRoutes = require("./eventRoutes");
 
 const userRoutes = require("./userRoutes");
+
 const blogRouter = require("./blogRoutes");
 
 const categoryRoutes = require("./categoryRoutes");
