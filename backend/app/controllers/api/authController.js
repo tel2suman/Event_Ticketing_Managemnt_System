@@ -86,149 +86,149 @@ class AuthController {
   }
 
   // email-verification
-  async verifyEmail(req, res) {
-    try {
-      const { token, id } = req.query;
+  // async verifyEmail(req, res) {
+  //   try {
+  //     const { token, id } = req.query;
 
-      if (!token || !id) {
-        return res.status(HttpStatusCode.BAD_REQUEST).json({
-          success: false,
-          message: "Verification token and user ID are required.",
-        });
-      }
+  //     if (!token || !id) {
+  //       return res.status(HttpStatusCode.BAD_REQUEST).json({
+  //         success: false,
+  //         message: "Verification token and user ID are required.",
+  //       });
+  //     }
 
-      const user = await User.findById(id);
+  //     const user = await User.findById(id);
 
-      // If the user exists and is already verified
-      if (user && user.isEmailVerified) {
-        return res.status(HttpStatusCode.SUCCESS).json({
-          success: true,
-          message: "Email is already verified. Please sign in.",
-        });
-      }
+  //     // If the user exists and is already verified
+  //     if (user && user.isEmailVerified) {
+  //       return res.status(HttpStatusCode.SUCCESS).json({
+  //         success: true,
+  //         message: "Email is already verified. Please sign in.",
+  //       });
+  //     }
 
-      // User doesn't exist
-      if (!user) {
-        return res.status(HttpStatusCode.NOT_FOUND).json({
-          success: false,
-          message: "User account not found.",
-        });
-      }
+  //     // User doesn't exist
+  //     if (!user) {
+  //       return res.status(HttpStatusCode.NOT_FOUND).json({
+  //         success: false,
+  //         message: "User account not found.",
+  //       });
+  //     }
 
-      const storedToken = await Token.findOne({
-        userId: user._id,
-        type: "email_verification",
-        expiresAt: {
-          $gt: new Date(),
-        },
-      });
+  //     const storedToken = await Token.findOne({
+  //       userId: user._id,
+  //       type: "email_verification",
+  //       expiresAt: {
+  //         $gt: new Date(),
+  //       },
+  //     });
 
-      if (!storedToken) {
-        return res.status(HttpStatusCode.BAD_REQUEST).json({
-          success: false,
-          message:
-            "Verification link is invalid or has expired. Please request a new verification email.",
-        });
-      }
+  //     if (!storedToken) {
+  //       return res.status(HttpStatusCode.BAD_REQUEST).json({
+  //         success: false,
+  //         message:
+  //           "Verification link is invalid or has expired. Please request a new verification email.",
+  //       });
+  //     }
 
-      const isVerificationTokenValid = await bcrypt.compare(
-        token,
-        storedToken.token,
-      );
+  //     const isVerificationTokenValid = await bcrypt.compare(
+  //       token,
+  //       storedToken.token,
+  //     );
 
-      if (!isVerificationTokenValid) {
-        return res.status(HttpStatusCode.BAD_REQUEST).json({
-          success: false,
-          message:
-            "Verification link is invalid or has expired. Please request a new verification email.",
-        });
-      }
+  //     if (!isVerificationTokenValid) {
+  //       return res.status(HttpStatusCode.BAD_REQUEST).json({
+  //         success: false,
+  //         message:
+  //           "Verification link is invalid or has expired. Please request a new verification email.",
+  //       });
+  //     }
 
-      user.isEmailVerified = true;
+  //     user.isEmailVerified = true;
 
-      await user.save();
+  //     await user.save();
 
-      // Remove the verification token after successful verification.
-      await Token.deleteMany({
-        userId: user._id,
-        type: "email_verification",
-      });
+  //     // Remove the verification token after successful verification.
+  //     await Token.deleteMany({
+  //       userId: user._id,
+  //       type: "email_verification",
+  //     });
 
-      return res.status(HttpStatusCode.SUCCESS).json({
-        success: true,
-        message: "Email verified successfully. You can now sign in.",
-      });
-    } catch (error) {
-      console.error("Email verification error:", error);
+  //     return res.status(HttpStatusCode.SUCCESS).json({
+  //       success: true,
+  //       message: "Email verified successfully. You can now sign in.",
+  //     });
+  //   } catch (error) {
+  //     console.error("Email verification error:", error);
 
-      return res.status(HttpStatusCode.SERVER_ERROR).json({
-        success: false,
-        message: "Unable to verify email address.",
-      });
-    }
-  }
+  //     return res.status(HttpStatusCode.SERVER_ERROR).json({
+  //       success: false,
+  //       message: "Unable to verify email address.",
+  //     });
+  //   }
+  // }
 
   // resendVerificationEmail
-  async resendVerificationEmail(req, res) {
-    try {
-      const { email } = req.body;
+  // async resendVerificationEmail(req, res) {
+  //   try {
+  //     const { email } = req.body;
 
-      const user = await User.findOne({ email, isDeleted: false });
+  //     const user = await User.findOne({ email, isDeleted: false });
 
-      const responseMessage = "A verification link has been sent.";
+  //     const responseMessage = "A verification link has been sent.";
 
-      if (!user) {
-        return res.status(HttpStatusCode.NOT_FOUND).json({
-          success: false,
-          message: "User not found",
-        });
-      }
+  //     if (!user) {
+  //       return res.status(HttpStatusCode.NOT_FOUND).json({
+  //         success: false,
+  //         message: "User not found",
+  //       });
+  //     }
 
-      if (user.isEmailVerified) {
-        return res.status(HttpStatusCode.BAD_REQUEST).json({
-          success: false,
-          message: "Email address has already been verified.",
-        });
-      }
+  //     if (user.isEmailVerified) {
+  //       return res.status(HttpStatusCode.BAD_REQUEST).json({
+  //         success: false,
+  //         message: "Email address has already been verified.",
+  //       });
+  //     }
 
-      // Remove any previously issued email verification tokens.
-      await Token.deleteMany({
-        userId: user._id,
-        type: "email_verification",
-      });
+  //     // Remove any previously issued email verification tokens.
+  //     await Token.deleteMany({
+  //       userId: user._id,
+  //       type: "email_verification",
+  //     });
 
-      // Generate a cryptographically secure email verification token.
-      const verificationToken = crypto.randomBytes(32).toString("hex");
+  //     // Generate a cryptographically secure email verification token.
+  //     const verificationToken = crypto.randomBytes(32).toString("hex");
 
-      // Hash the verification token before storing it in the database.
-      const hashedVerificationToken = await bcrypt.hash(verificationToken, 10);
+  //     // Hash the verification token before storing it in the database.
+  //     const hashedVerificationToken = await bcrypt.hash(verificationToken, 10);
 
-      await Token.create({
-        userId: user._id,
-        token: hashedVerificationToken,
-        type: "email_verification",
-        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
-      });
+  //     await Token.create({
+  //       userId: user._id,
+  //       token: hashedVerificationToken,
+  //       type: "email_verification",
+  //       expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+  //     });
 
-      const verificationUrl =
-        `${process.env.APP_BASE_URL}/api/v1/auth/verify-email` +
-        `?token=${verificationToken}&id=${user._id}`;
+  //     const verificationUrl =
+  //       `${process.env.APP_BASE_URL}/api/v1/auth/verify-email` +
+  //       `?token=${verificationToken}&id=${user._id}`;
 
-      await EmailUtility.sendVerificationEmail(user, verificationUrl);
+  //     await EmailUtility.sendVerificationEmail(user, verificationUrl);
 
-      return res.status(HttpStatusCode.SUCCESS).json({
-        success: true,
-        message: responseMessage,
-      });
-    } catch (error) {
-      console.error("Resend verification email error:", error);
+  //     return res.status(HttpStatusCode.SUCCESS).json({
+  //       success: true,
+  //       message: responseMessage,
+  //     });
+  //   } catch (error) {
+  //     console.error("Resend verification email error:", error);
 
-      return res.status(HttpStatusCode.SERVER_ERROR).json({
-        success: false,
-        message: "Unable to resend verification email.",
-      });
-    }
-  }
+  //     return res.status(HttpStatusCode.SERVER_ERROR).json({
+  //       success: false,
+  //       message: "Unable to resend verification email.",
+  //     });
+  //   }
+  // }
 
   //login
   async login(req, res) {
@@ -435,215 +435,215 @@ class AuthController {
   }
 
   // forgotPassword
-  async forgotPassword(req, res) {
-    try {
-      const { email } = req.body;
+  // async forgotPassword(req, res) {
+  //   try {
+  //     const { email } = req.body;
 
-      const user = await User.findOne({ email, isDeleted: false });
+  //     const user = await User.findOne({ email, isDeleted: false });
 
-      if (!user) {
-        return res.status(HttpStatusCode.NOT_FOUND).json({
-          success: false,
-          message: "User does not exist.",
-        });
-      }
+  //     if (!user) {
+  //       return res.status(HttpStatusCode.NOT_FOUND).json({
+  //         success: false,
+  //         message: "User does not exist.",
+  //       });
+  //     }
 
-      // Remove any previously issued password reset tokens.
-      await Token.deleteMany({
-        userId: user._id,
-        type: "password_reset",
-      });
+  //     // Remove any previously issued password reset tokens.
+  //     await Token.deleteMany({
+  //       userId: user._id,
+  //       type: "password_reset",
+  //     });
 
-      // Generate a cryptographically secure password reset token.
-      const passwordResetToken = crypto.randomBytes(32).toString("hex");
+  //     // Generate a cryptographically secure password reset token.
+  //     const passwordResetToken = crypto.randomBytes(32).toString("hex");
 
-      // Hash the password reset token before database storage.
-      const hashedPasswordResetToken = await bcrypt.hash(
-        passwordResetToken,
-        12,
-      );
+  //     // Hash the password reset token before database storage.
+  //     const hashedPasswordResetToken = await bcrypt.hash(
+  //       passwordResetToken,
+  //       12,
+  //     );
 
-      await Token.create({
-        userId: user._id,
-        token: hashedPasswordResetToken,
-        type: "password_reset",
-        expiresAt: new Date(Date.now() + 15 * 60 * 1000),
-      });
+  //     await Token.create({
+  //       userId: user._id,
+  //       token: hashedPasswordResetToken,
+  //       type: "password_reset",
+  //       expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+  //     });
 
-      const resetUrl =
-        `${process.env.APP_BASE_URL}/api/v1/auth/reset-password` +
-        `?token=${passwordResetToken}&id=${user._id}`;
+  //     const resetUrl =
+  //       `${process.env.APP_BASE_URL}/api/v1/auth/reset-password` +
+  //       `?token=${passwordResetToken}&id=${user._id}`;
 
-      await EmailUtility.sendPasswordResetEmail(user, resetUrl);
+  //     await EmailUtility.sendPasswordResetEmail(user, resetUrl);
 
-      return res.status(HttpStatusCode.SUCCESS).json({
-        success: true,
-        message: "A password reset link has been sent.",
-      });
-    } catch (error) {
-      console.error("Forgot password error:", error);
+  //     return res.status(HttpStatusCode.SUCCESS).json({
+  //       success: true,
+  //       message: "A password reset link has been sent.",
+  //     });
+  //   } catch (error) {
+  //     console.error("Forgot password error:", error);
 
-      return res.status(HttpStatusCode.SERVER_ERROR).json({
-        success: false,
-        message: "Unable to process password reset request.",
-      });
-    }
-  }
+  //     return res.status(HttpStatusCode.SERVER_ERROR).json({
+  //       success: false,
+  //       message: "Unable to process password reset request.",
+  //     });
+  //   }
+  // }
 
   // resetPassword
-  async resetPassword(req, res) {
-    try {
-      const { token, id } = req.query;
+  // async resetPassword(req, res) {
+  //   try {
+  //     const { token, id } = req.query;
 
-      const { password } = req.body;
+  //     const { password } = req.body;
 
-      if (!token || !id) {
-        return res.status(HttpStatusCode.BAD_REQUEST).json({
-          success: false,
-          message: "Reset token and user ID are required.",
-        });
-      }
+  //     if (!token || !id) {
+  //       return res.status(HttpStatusCode.BAD_REQUEST).json({
+  //         success: false,
+  //         message: "Reset token and user ID are required.",
+  //       });
+  //     }
 
-      const storedToken = await Token.findOne({
-        userId: id,
-        type: "password_reset",
-        expiresAt: {
-          $gt: new Date(),
-        },
-      });
+  //     const storedToken = await Token.findOne({
+  //       userId: id,
+  //       type: "password_reset",
+  //       expiresAt: {
+  //         $gt: new Date(),
+  //       },
+  //     });
 
-      if (!storedToken) {
-        return res.status(HttpStatusCode.BAD_REQUEST).json({
-          success: false,
-          message: "Password reset link is invalid or has expired.",
-        });
-      }
+  //     if (!storedToken) {
+  //       return res.status(HttpStatusCode.BAD_REQUEST).json({
+  //         success: false,
+  //         message: "Password reset link is invalid or has expired.",
+  //       });
+  //     }
 
-      const isPasswordResetTokenValid = await bcrypt.compare(
-        token,
-        storedToken.token,
-      );
+  //     const isPasswordResetTokenValid = await bcrypt.compare(
+  //       token,
+  //       storedToken.token,
+  //     );
 
-      if (!isPasswordResetTokenValid) {
-        return res.status(HttpStatusCode.BAD_REQUEST).json({
-          success: false,
-          message: "Password reset link is invalid or has expired.",
-        });
-      }
+  //     if (!isPasswordResetTokenValid) {
+  //       return res.status(HttpStatusCode.BAD_REQUEST).json({
+  //         success: false,
+  //         message: "Password reset link is invalid or has expired.",
+  //       });
+  //     }
 
-      const user = await User.findOne({ _id: id, isDeleted: false }).select(
-        "+password +refreshToken",
-      );
+  //     const user = await User.findOne({ _id: id, isDeleted: false }).select(
+  //       "+password +refreshToken",
+  //     );
 
-      if (!user) {
-        return res.status(HttpStatusCode.NOT_FOUND).json({
-          success: false,
-          message: "User account not found.",
-        });
-      }
+  //     if (!user) {
+  //       return res.status(HttpStatusCode.NOT_FOUND).json({
+  //         success: false,
+  //         message: "User account not found.",
+  //       });
+  //     }
 
-      const isSamePassword = await bcrypt.compare(password, user.password);
+  //     const isSamePassword = await bcrypt.compare(password, user.password);
 
-      if (isSamePassword) {
-        return res.status(HttpStatusCode.BAD_REQUEST).json({
-          success: false,
-          message: "New password must be different from the current password.",
-        });
-      }
+  //     if (isSamePassword) {
+  //       return res.status(HttpStatusCode.BAD_REQUEST).json({
+  //         success: false,
+  //         message: "New password must be different from the current password.",
+  //       });
+  //     }
 
-      user.password = await bcrypt.hash(password, 12);
+  //     user.password = await bcrypt.hash(password, 12);
 
-      // Invalidate the current refresh token after a password change.
-      user.refreshToken = null;
+  //     // Invalidate the current refresh token after a password change.
+  //     user.refreshToken = null;
 
-      await user.save();
+  //     await user.save();
 
-      // Remove the reset token after successful use to prevent reuse.
-      await Token.deleteMany({
-        userId: user._id,
-        type: "password_reset",
-      });
+  //     // Remove the reset token after successful use to prevent reuse.
+  //     await Token.deleteMany({
+  //       userId: user._id,
+  //       type: "password_reset",
+  //     });
 
-      res.clearCookie("accessToken");
+  //     res.clearCookie("accessToken");
 
-      res.clearCookie("refreshToken");
+  //     res.clearCookie("refreshToken");
 
-      return res.status(HttpStatusCode.SUCCESS).json({
-        success: true,
-        message:
-          "Password reset successfully. Please sign in with your new password.",
-      });
-    } catch (error) {
-      console.error("Password reset error:", error);
+  //     return res.status(HttpStatusCode.SUCCESS).json({
+  //       success: true,
+  //       message:
+  //         "Password reset successfully. Please sign in with your new password.",
+  //     });
+  //   } catch (error) {
+  //     console.error("Password reset error:", error);
 
-      return res.status(HttpStatusCode.SERVER_ERROR).json({
-        success: false,
-        message: "Unable to reset password.",
-      });
-    }
-  }
+  //     return res.status(HttpStatusCode.SERVER_ERROR).json({
+  //       success: false,
+  //       message: "Unable to reset password.",
+  //     });
+  //   }
+  // }
 
   // changePassword
-  async changePassword(req, res) {
-    try {
-      const { oldPassword, newPassword } = req.body;
+  // async changePassword(req, res) {
+  //   try {
+  //     const { oldPassword, newPassword } = req.body;
 
-      const user = await User.findById(req.user._id).select(
-        "+password +refreshToken",
-      );
+  //     const user = await User.findById(req.user._id).select(
+  //       "+password +refreshToken",
+  //     );
 
-      if (!user) {
-        return res.status(HttpStatusCode.NOT_FOUND).json({
-          success: false,
-          message: "User account not found.",
-        });
-      }
+  //     if (!user) {
+  //       return res.status(HttpStatusCode.NOT_FOUND).json({
+  //         success: false,
+  //         message: "User account not found.",
+  //       });
+  //     }
 
-      const isOldPasswordValid = await bcrypt.compare(
-        oldPassword,
-        user.password,
-      );
+  //     const isOldPasswordValid = await bcrypt.compare(
+  //       oldPassword,
+  //       user.password,
+  //     );
 
-      if (!isOldPasswordValid) {
-        return res.status(HttpStatusCode.UNAUTHORIZED).json({
-          success: false,
-          message: "Current password is incorrect.",
-        });
-      }
+  //     if (!isOldPasswordValid) {
+  //       return res.status(HttpStatusCode.UNAUTHORIZED).json({
+  //         success: false,
+  //         message: "Current password is incorrect.",
+  //       });
+  //     }
 
-      const isSamePassword = await bcrypt.compare(newPassword, user.password);
+  //     const isSamePassword = await bcrypt.compare(newPassword, user.password);
 
-      if (isSamePassword) {
-        return res.status(HttpStatusCode.BAD_REQUEST).json({
-          success: false,
-          message: "New password must be different from the current password.",
-        });
-      }
+  //     if (isSamePassword) {
+  //       return res.status(HttpStatusCode.BAD_REQUEST).json({
+  //         success: false,
+  //         message: "New password must be different from the current password.",
+  //       });
+  //     }
 
-      user.password = await bcrypt.hash(newPassword, 12);
+  //     user.password = await bcrypt.hash(newPassword, 12);
 
-      // Force the user to sign in again after changing the password.
-      user.refreshToken = null;
+  //     // Force the user to sign in again after changing the password.
+  //     user.refreshToken = null;
 
-      await user.save();
+  //     await user.save();
 
-      res.clearCookie("accessToken");
+  //     res.clearCookie("accessToken");
 
-      res.clearCookie("refreshToken");
+  //     res.clearCookie("refreshToken");
 
-      return res.status(HttpStatusCode.SUCCESS).json({
-        success: true,
-        message: "Password changed successfully. Please sign in again.",
-      });
-    } catch (error) {
-      console.error("Change password error:", error);
+  //     return res.status(HttpStatusCode.SUCCESS).json({
+  //       success: true,
+  //       message: "Password changed successfully. Please sign in again.",
+  //     });
+  //   } catch (error) {
+  //     console.error("Change password error:", error);
 
-      return res.status(HttpStatusCode.SERVER_ERROR).json({
-        success: false,
-        message: "Unable to change password.",
-      });
-    }
-  }
+  //     return res.status(HttpStatusCode.SERVER_ERROR).json({
+  //       success: false,
+  //       message: "Unable to change password.",
+  //     });
+  //   }
+  // }
 
   // logout
   async logout(req, res) {
