@@ -61,24 +61,24 @@ router.post(
   AuthController.register,
 );
 
-/**
- * @swagger
- * /api/v1/auth/verify-email:
- *   get:
- *     tags: [Auth]
- *     summary: Verify a registered user's email
- *     security: []
- *     parameters:
- *       - { name: token, in: query, required: true, schema: { type: string } }
- *       - { name: id, in: query, required: true, schema: { type: string } }
- *     responses:
- *       200:
- *         description: Email verified
- *         content:
- *           application/json:
- *             schema: { $ref: '#/components/schemas/SuccessMessage' }
- *       400: { $ref: '#/components/responses/BadRequest' }
- */
+// /**
+//  * @swagger
+//  * /api/v1/auth/verify-email:
+//  *   get:
+//  *     tags: [Auth]
+//  *     summary: Verify a registered user's email
+//  *     security: []
+//  *     parameters:
+//  *       - { name: token, in: query, required: true, schema: { type: string } }
+//  *       - { name: id, in: query, required: true, schema: { type: string } }
+//  *     responses:
+//  *       200:
+//  *         description: Email verified
+//  *         content:
+//  *           application/json:
+//  *             schema: { $ref: '#/components/schemas/SuccessMessage' }
+//  *       400: { $ref: '#/components/responses/BadRequest' }
+//  */
 // Verify a registered user's email address.
 // router.get("/verify-email", AuthController.verifyEmail);
 
