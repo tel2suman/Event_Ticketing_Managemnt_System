@@ -1,5 +1,7 @@
 const cloudinary = require("cloudinary").v2;
 
+require("dotenv").config();
+
 // Configure the Cloudinary SDK using application environment credentials.
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
