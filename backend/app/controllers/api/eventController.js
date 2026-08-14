@@ -451,7 +451,7 @@ class EventController {
       // Update banner if a new image is provided
       if (req.file) {
         // Upload new image first
-        imageResult = await uploadToCloudinary(req.file.path);
+        imageResult = await uploadToCloudinary(req.file.buffer);
 
         // Delete old image only after new upload succeeds
         if (event.cloudinary_id) {
