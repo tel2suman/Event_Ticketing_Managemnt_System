@@ -27,6 +27,10 @@ class EventController {
         map,
         artistName,
         artistDescription,
+        youtube,
+        instagram,
+        facebook,
+        x,
         status,
       } = req.body;
 
@@ -157,6 +161,14 @@ class EventController {
           cloudinary_id: artistImageResult.public_id,
           artistDescription: artistDescription.trim(),
         },
+
+        socialLinks: {
+          youtube: youtube?.trim() || "",
+          instagram: instagram?.trim() || "",
+          facebook: facebook?.trim() || "",
+          x: x?.trim() || "",
+        },
+
         status: status || "active",
         createdBy: req.user._id,
       });
@@ -587,6 +599,28 @@ class EventController {
 
       if (req.body.artistDescription !== undefined) {
         event.artist.artistDescription = req.body.artistDescription.trim();
+      }
+
+      /*
+       * --------------------------------
+       * ARTIST SOCIAL MEDIA DETAILS
+       * --------------------------------
+       */
+
+      if (req.body.youtube !== undefined) {
+        event.artist.socialLinks.youtube = req.body.youtube.trim();
+      }
+
+      if (req.body.instagram !== undefined) {
+        event.artist.socialLinks.instagram = req.body.instagram.trim();
+      }
+
+      if (req.body.facebook !== undefined) {
+        event.artist.socialLinks.facebook = req.body.facebook.trim();
+      }
+
+      if (req.body.x !== undefined) {
+        event.artist.socialLinks.x = req.body.x.trim();
       }
 
       /*

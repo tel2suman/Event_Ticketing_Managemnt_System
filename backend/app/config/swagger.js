@@ -269,6 +269,35 @@ const swaggerDefinition = {
                 example: "Indian playback singer and live performer.",
               },
             },
+            
+            socialLinks: {
+              type: "object",
+              properties: {
+                youtube: {
+                  type: "string",
+                  format: "uri",
+                  example: "https://www.youtube.com/@artist",
+                },
+
+                instagram: {
+                  type: "string",
+                  format: "uri",
+                  example: "https://www.instagram.com/artist",
+                },
+
+                facebook: {
+                  type: "string",
+                  format: "uri",
+                  example: "https://www.facebook.com/artist",
+                },
+
+                x: {
+                  type: "string",
+                  format: "uri",
+                  example: "https://x.com/artist",
+                },
+              },
+            },
           },
 
           status: {
@@ -359,7 +388,7 @@ const swaggerDefinition = {
           },
         },
       },
-      
+
       TicketTier: {
         type: "object",
         properties: {

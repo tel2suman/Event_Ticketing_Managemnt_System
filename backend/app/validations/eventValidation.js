@@ -73,12 +73,19 @@ const createEventValidation = Joi.object({
     "string.empty": "Artist description is required",
   }),
 
+  youtube: Joi.string().uri().allow("").optional(),
+
+  instagram: Joi.string().uri().allow("").optional(),
+
+  facebook: Joi.string().uri().allow("").optional(),
+
+  x: Joi.string().uri().allow("").optional(),
+
   status: Joi.string().valid("active", "inactive").default("active"),
 });
 
 // update Event validation
 const updateEventValidation = Joi.object({
-  
   title: Joi.string().trim().min(2).max(200).optional().messages({
     "string.min": "Event title must be at least 2 characters",
     "string.max": "Event title cannot exceed 200 characters",
@@ -125,6 +132,14 @@ const updateEventValidation = Joi.object({
   artistDescription: Joi.string().trim().min(5).optional().messages({
     "string.min": "Artist description must be at least 5 characters",
   }),
+
+  youtube: Joi.string().uri().allow("").optional(),
+
+  instagram: Joi.string().uri().allow("").optional(),
+
+  facebook: Joi.string().uri().allow("").optional(),
+  
+  x: Joi.string().uri().allow("").optional(),
 
   status: Joi.string().valid("active", "inactive").optional().messages({
     "any.only": "Status must be either active or inactive",
