@@ -61,51 +61,51 @@ router.post(
   AuthController.register,
 );
 
-/**
- * @swagger
- * /api/v1/auth/verify-email:
- *   get:
- *     tags: [Auth]
- *     summary: Verify a registered user's email
- *     security: []
- *     parameters:
- *       - { name: token, in: query, required: true, schema: { type: string } }
- *       - { name: id, in: query, required: true, schema: { type: string } }
- *     responses:
- *       200:
- *         description: Email verified
- *         content:
- *           application/json:
- *             schema: { $ref: '#/components/schemas/SuccessMessage' }
- *       400: { $ref: '#/components/responses/BadRequest' }
- */
+// /**
+//  * @swagger
+//  * /api/v1/auth/verify-email:
+//  *   get:
+//  *     tags: [Auth]
+//  *     summary: Verify a registered user's email
+//  *     security: []
+//  *     parameters:
+//  *       - { name: token, in: query, required: true, schema: { type: string } }
+//  *       - { name: id, in: query, required: true, schema: { type: string } }
+//  *     responses:
+//  *       200:
+//  *         description: Email verified
+//  *         content:
+//  *           application/json:
+//  *             schema: { $ref: '#/components/schemas/SuccessMessage' }
+//  *       400: { $ref: '#/components/responses/BadRequest' }
+//  */
 // Verify a registered user's email address.
 // router.get("/verify-email", AuthController.verifyEmail);
 
-/**
- * @swagger
- * /api/v1/auth/resend-verification-email:
- *   post:
- *     tags: [Auth]
- *     summary: Resend the email verification link
- *     security: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [email]
- *             properties:
- *               email: { type: string, format: email }
- *     responses:
- *       200:
- *         description: Link resent
- *         content:
- *           application/json:
- *             schema: { $ref: '#/components/schemas/SuccessMessage' }
- *       400: { $ref: '#/components/responses/BadRequest' }
- */
+// /**
+//  * @swagger
+//  * /api/v1/auth/resend-verification-email:
+//  *   post:
+//  *     tags: [Auth]
+//  *     summary: Resend the email verification link
+//  *     security: []
+//  *     requestBody:
+//  *       required: true
+//  *       content:
+//  *         application/json:
+//  *           schema:
+//  *             type: object
+//  *             required: [email]
+//  *             properties:
+//  *               email: { type: string, format: email }
+//  *     responses:
+//  *       200:
+//  *         description: Link resent
+//  *         content:
+//  *           application/json:
+//  *             schema: { $ref: '#/components/schemas/SuccessMessage' }
+//  *       400: { $ref: '#/components/responses/BadRequest' }
+//  */
 // Resend the email verification link.
 // router.post(
 //   "/resend-verification-email",
@@ -190,30 +190,30 @@ router.post(
 // Rotate the current refresh token and issue new authentication tokens.
 router.post("/refresh-token", authLimiter, AuthController.refreshToken);
 
-/**
- * @swagger
- * /api/v1/auth/forgot-password:
- *   post:
- *     tags: [Auth]
- *     summary: Request a password reset link
- *     security: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [email]
- *             properties:
- *               email: { type: string, format: email }
- *     responses:
- *       200:
- *         description: Reset link sent
- *         content:
- *           application/json:
- *             schema: { $ref: '#/components/schemas/SuccessMessage' }
- *       404: { $ref: '#/components/responses/NotFound' }
- */
+// /**
+//  * @swagger
+//  * /api/v1/auth/forgot-password:
+//  *   post:
+//  *     tags: [Auth]
+//  *     summary: Request a password reset link
+//  *     security: []
+//  *     requestBody:
+//  *       required: true
+//  *       content:
+//  *         application/json:
+//  *           schema:
+//  *             type: object
+//  *             required: [email]
+//  *             properties:
+//  *               email: { type: string, format: email }
+//  *     responses:
+//  *       200:
+//  *         description: Reset link sent
+//  *         content:
+//  *           application/json:
+//  *             schema: { $ref: '#/components/schemas/SuccessMessage' }
+//  *       404: { $ref: '#/components/responses/NotFound' }
+//  */
 // Request a password reset link.
 // router.post(
 //   "/forgot-password",
@@ -222,33 +222,33 @@ router.post("/refresh-token", authLimiter, AuthController.refreshToken);
 //   AuthController.forgotPassword,
 // );
 
-/**
- * @swagger
- * /api/v1/auth/reset-password:
- *   patch:
- *     tags: [Auth]
- *     summary: Reset the account password using a valid reset token
- *     security: []
- *     parameters:
- *       - { name: token, in: query, required: true, schema: { type: string } }
- *       - { name: id, in: query, required: true, schema: { type: string } }
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [password]
- *             properties:
- *               password: { type: string, format: password, example: "Aa@123456789" }
- *     responses:
- *       200:
- *         description: Password reset
- *         content:
- *           application/json:
- *             schema: { $ref: '#/components/schemas/SuccessMessage' }
- *       400: { $ref: '#/components/responses/BadRequest' }
- */
+// /**
+//  * @swagger
+//  * /api/v1/auth/reset-password:
+//  *   patch:
+//  *     tags: [Auth]
+//  *     summary: Reset the account password using a valid reset token
+//  *     security: []
+//  *     parameters:
+//  *       - { name: token, in: query, required: true, schema: { type: string } }
+//  *       - { name: id, in: query, required: true, schema: { type: string } }
+//  *     requestBody:
+//  *       required: true
+//  *       content:
+//  *         application/json:
+//  *           schema:
+//  *             type: object
+//  *             required: [password]
+//  *             properties:
+//  *               password: { type: string, format: password, example: "Aa@123456789" }
+//  *     responses:
+//  *       200:
+//  *         description: Password reset
+//  *         content:
+//  *           application/json:
+//  *             schema: { $ref: '#/components/schemas/SuccessMessage' }
+//  *       400: { $ref: '#/components/responses/BadRequest' }
+//  */
 // Reset the account password using a valid password reset token.
 // router.patch(
 //   "/reset-password",
@@ -257,31 +257,31 @@ router.post("/refresh-token", authLimiter, AuthController.refreshToken);
 //   AuthController.resetPassword,
 // );
 
-/**
- * @swagger
- * /api/v1/auth/change-password:
- *   patch:
- *     tags: [Auth]
- *     summary: Change the logged-in user's password
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [oldPassword, newPassword]
- *             properties:
- *               oldPassword: { type: string, format: password }
- *               newPassword: { type: string, format: password }
- *     responses:
- *       200:
- *         description: Password changed
- *         content:
- *           application/json:
- *             schema: { $ref: '#/components/schemas/SuccessMessage' }
- *       400: { $ref: '#/components/responses/BadRequest' }
- *       401: { $ref: '#/components/responses/Unauthorized' }
- */
+// /**
+//  * @swagger
+//  * /api/v1/auth/change-password:
+//  *   patch:
+//  *     tags: [Auth]
+//  *     summary: Change the logged-in user's password
+//  *     requestBody:
+//  *       required: true
+//  *       content:
+//  *         application/json:
+//  *           schema:
+//  *             type: object
+//  *             required: [oldPassword, newPassword]
+//  *             properties:
+//  *               oldPassword: { type: string, format: password }
+//  *               newPassword: { type: string, format: password }
+//  *     responses:
+//  *       200:
+//  *         description: Password changed
+//  *         content:
+//  *           application/json:
+//  *             schema: { $ref: '#/components/schemas/SuccessMessage' }
+//  *       400: { $ref: '#/components/responses/BadRequest' }
+//  *       401: { $ref: '#/components/responses/Unauthorized' }
+//  */
 // router.patch(
 //   "/change-password",
 //   AuthMiddleware,
