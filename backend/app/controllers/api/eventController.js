@@ -7,7 +7,6 @@ const mongoose = require("mongoose");
 class EventController {
   // create event
   async createEvent(req, res) {
-
     let bannerResult = null;
     let locationImageResult = null;
     let artistImageResult = null;
@@ -160,13 +159,12 @@ class EventController {
           profileImage: artistImageResult.secure_url,
           cloudinary_id: artistImageResult.public_id,
           artistDescription: artistDescription.trim(),
-        },
-
-        socialLinks: {
-          youtube: youtube?.trim() || "",
-          instagram: instagram?.trim() || "",
-          facebook: facebook?.trim() || "",
-          x: x?.trim() || "",
+          socialLinks: {
+            youtube: youtube?.trim() || "",
+            instagram: instagram?.trim() || "",
+            facebook: facebook?.trim() || "",
+            x: x?.trim() || "",
+          },
         },
 
         status: status || "active",
@@ -486,13 +484,21 @@ class EventController {
 
   //update event
   async updateEvent(req, res) {
-
+    
     let bannerResult = null;
     let locationImageResult = null;
     let artistImageResult = null;
 
+    let oldBannerId = null;
+    let oldLocationImageId = null;
+    let oldArtistImageId = null;
+
     try {
       const { eventId } = req.params;
+
+      // ----------------------------------------
+      // Find event
+      // ----------------------------------------
 
       const event = await Event.findById(eventId);
 
@@ -503,7 +509,10 @@ class EventController {
         });
       }
 
-      // Check the event's current category
+      // ----------------------------------------
+      // Check current category
+      // ----------------------------------------
+
       const currentCategory = await Category.findById(event.categoryId);
 
       if (!currentCategory || !currentCategory.isActive) {
@@ -513,7 +522,10 @@ class EventController {
         });
       }
 
-      // If category is being changed, new category must be active
+      // ----------------------------------------
+      // Category update
+      // ----------------------------------------
+
       if (
         req.body.categoryId !== undefined &&
         req.body.categoryId !== event.categoryId.toString()
@@ -533,17 +545,20 @@ class EventController {
         event.categoryId = newCategory._id;
       }
 
-      // Update only the fields provided in the request
+      // ----------------------------------------
+      // Basic Event Details
+      // ----------------------------------------
+
       if (req.body.title !== undefined) {
         event.title = req.body.title.trim();
       }
 
       if (req.body.description !== undefined) {
-        event.description = req.body.description;
+        event.description = req.body.description.trim();
       }
 
       if (req.body.location !== undefined) {
-        event.location = req.body.location;
+        event.location = req.body.location.trim();
       }
 
       if (req.body.date !== undefined) {
@@ -551,26 +566,28 @@ class EventController {
       }
 
       if (req.body.time !== undefined) {
-        event.time = req.body.time;
+        event.time = req.body.time.trim();
       }
 
       if (req.body.organizer !== undefined) {
-        event.organizer = req.body.organizer;
+        event.organizer = req.body.organizer.trim();
       }
 
       if (req.body.price !== undefined) {
-        event.price = req.body.price;
+        event.price = Number(req.body.price);
       }
 
       if (req.body.status !== undefined) {
         event.status = req.body.status;
       }
 
-      /*
-       * --------------------------------
-       * LOCATION DETAILS
-       * --------------------------------
-       */
+      // ----------------------------------------
+      // Location Details
+      // ----------------------------------------
+
+      if (!event.locationDetails) {
+        event.locationDetails = {};
+      }
 
       if (req.body.address !== undefined) {
         event.locationDetails.address = req.body.address.trim();
@@ -587,11 +604,13 @@ class EventController {
         event.locationDetails.map = req.body.map.trim();
       }
 
-      /*
-       * --------------------------------
-       * ARTIST DETAILS
-       * --------------------------------
-       */
+      // ----------------------------------------
+      // Artist Details
+      // ----------------------------------------
+
+      if (!event.artist) {
+        event.artist = {};
+      }
 
       if (req.body.artistName !== undefined) {
         event.artist.artistName = req.body.artistName.trim();
@@ -601,11 +620,13 @@ class EventController {
         event.artist.artistDescription = req.body.artistDescription.trim();
       }
 
-      /*
-       * --------------------------------
-       * ARTIST SOCIAL MEDIA DETAILS
-       * --------------------------------
-       */
+      // ----------------------------------------
+      // Artist Social Links
+      // ----------------------------------------
+
+      if (!event.artist.socialLinks) {
+        event.artist.socialLinks = {};
+      }
 
       if (req.body.youtube !== undefined) {
         event.artist.socialLinks.youtube = req.body.youtube.trim();
@@ -623,80 +644,120 @@ class EventController {
         event.artist.socialLinks.x = req.body.x.trim();
       }
 
-      /*
-       * --------------------------------
-       * EVENT BANNER
-       * --------------------------------
-       */
+      // ----------------------------------------
+      // Event Banner
+      // ----------------------------------------
 
       if (req.files?.banner?.[0]) {
+        // Store old image ID
+        oldBannerId = event.cloudinary_id;
+
+        // Upload new image
         bannerResult = await uploadToCloudinary(
           req.files.banner[0].buffer,
           "uploads",
         );
 
-        // Delete old banner after new upload succeeds
-        if (event.cloudinary_id) {
-          await deleteFromCloudinary(event.cloudinary_id);
-        }
-
         event.banner = bannerResult.secure_url;
         event.cloudinary_id = bannerResult.public_id;
       }
 
-      /*
-       * --------------------------------
-       * LOCATION IMAGE
-       * --------------------------------
-       */
+      // ----------------------------------------
+      // Location Image
+      // ----------------------------------------
 
       if (req.files?.locationImage?.[0]) {
+        // Store old image ID
+        oldLocationImageId = event.locationDetails?.cloudinary_id;
+
+        // Upload new image
         locationImageResult = await uploadToCloudinary(
           req.files.locationImage[0].buffer,
           "uploads/locations",
         );
 
-        // Delete old location image
-        if (event.locationDetails?.cloudinary_id) {
-          await deleteFromCloudinary(event.locationDetails.cloudinary_id);
-        }
-
-        // Update ONLY image fields
         event.locationDetails.image = locationImageResult.secure_url;
 
         event.locationDetails.cloudinary_id = locationImageResult.public_id;
       }
 
-      /*
-       * --------------------------------
-       * ARTIST PROFILE IMAGE
-       * --------------------------------
-       */
+      // ----------------------------------------
+      // Artist Profile Image
+      // ----------------------------------------
 
       if (req.files?.artistProfileImage?.[0]) {
+        // Store old image ID
+        oldArtistImageId = event.artist?.cloudinary_id;
+
+        // Upload new image
         artistImageResult = await uploadToCloudinary(
           req.files.artistProfileImage[0].buffer,
           "uploads/artists",
         );
 
-        // Delete old artist image
-        if (event.artist?.cloudinary_id) {
-          await deleteFromCloudinary(event.artist.cloudinary_id);
-        }
-
-        // Update ONLY image fields
         event.artist.profileImage = artistImageResult.secure_url;
 
         event.artist.cloudinary_id = artistImageResult.public_id;
       }
 
       // ----------------------------------------
-      // Save event
+      // Save Event
       // ----------------------------------------
 
       await event.save();
 
+      // ----------------------------------------
+      // Delete old banner AFTER DB save
+      // ----------------------------------------
+
+      if (oldBannerId && oldBannerId !== event.cloudinary_id) {
+        try {
+          await deleteFromCloudinary(oldBannerId);
+        } catch (deleteError) {
+          console.error("Old banner deletion error:", deleteError.message);
+        }
+      }
+
+      // ----------------------------------------
+      // Delete old location image AFTER DB save
+      // ----------------------------------------
+
+      if (
+        oldLocationImageId &&
+        oldLocationImageId !== event.locationDetails?.cloudinary_id
+      ) {
+        try {
+          await deleteFromCloudinary(oldLocationImageId);
+        } catch (deleteError) {
+          console.error(
+            "Old location image deletion error:",
+            deleteError.message,
+          );
+        }
+      }
+
+      // ----------------------------------------
+      // Delete old artist image AFTER DB save
+      // ----------------------------------------
+
+      if (
+        oldArtistImageId &&
+        oldArtistImageId !== event.artist?.cloudinary_id
+      ) {
+        try {
+          await deleteFromCloudinary(oldArtistImageId);
+        } catch (deleteError) {
+          console.error(
+            "Old artist image deletion error:",
+            deleteError.message,
+          );
+        }
+      }
+
+      // ----------------------------------------
       // Notification
+      // ----------------------------------------
+
       await Notification.create({
         title: "Event Updated",
         message: `${event.title} has been updated successfully.`,
@@ -704,6 +765,10 @@ class EventController {
         eventId: event._id,
         createdBy: req.user._id,
       });
+
+      // ----------------------------------------
+      // Response
+      // ----------------------------------------
 
       return res.status(HttpStatusCode.SUCCESS).json({
         success: true,
@@ -714,7 +779,7 @@ class EventController {
       console.error("Update Event Error:", error);
 
       // ----------------------------------------
-      // Cleanup newly uploaded images
+      // Cleanup newly uploaded banner
       // ----------------------------------------
 
       if (bannerResult?.public_id) {
@@ -725,6 +790,10 @@ class EventController {
         }
       }
 
+      // ----------------------------------------
+      // Cleanup newly uploaded location image
+      // ----------------------------------------
+
       if (locationImageResult?.public_id) {
         try {
           await deleteFromCloudinary(locationImageResult.public_id);
@@ -732,6 +801,10 @@ class EventController {
           console.error("Location image cleanup error:", deleteError.message);
         }
       }
+
+      // ----------------------------------------
+      // Cleanup newly uploaded artist image
+      // ----------------------------------------
 
       if (artistImageResult?.public_id) {
         try {
@@ -1141,9 +1214,7 @@ class EventController {
 
   // toggle Events
   async toggleEvent(req, res) {
-
     try {
-
       const { eventId } = req.params;
 
       if (!eventId) {
