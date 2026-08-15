@@ -144,22 +144,222 @@ const swaggerDefinition = {
       Event: {
         type: "object",
         properties: {
-          _id: { type: "string" },
-          title: { type: "string" },
-          description: { type: "string" },
-          categoryId: { type: "string" },
-          categoryName: { type: "string" },
-          location: { type: "string" },
-          date: { type: "string", format: "date" },
-          time: { type: "string", example: "18:00" },
-          organizer: { type: "string" },
-          banner: { type: "string", format: "uri" },
-          status: { type: "string", enum: ["active", "inactive"] },
-          createdBy: { $ref: "#/components/schemas/User" },
-          createdAt: { type: "string", format: "date-time" },
-          updatedAt: { type: "string", format: "date-time" },
+          _id: {
+            type: "string",
+            example: "68abc123456789123456789",
+          },
+
+          title: {
+            type: "string",
+            example: "Live Music Night",
+          },
+
+          description: {
+            type: "string",
+            example: "An amazing live music experience.",
+          },
+
+          categoryId: {
+            type: "string",
+            example: "68cat123456789123456789",
+          },
+
+          categoryName: {
+            type: "string",
+            example: "Live Music",
+          },
+
+          location: {
+            type: "string",
+            example: "Netaji Indoor Stadium",
+          },
+
+          date: {
+            type: "string",
+            format: "date",
+            example: "2026-09-20",
+          },
+
+          time: {
+            type: "string",
+            example: "18:00",
+          },
+
+          organizer: {
+            type: "string",
+            example: "Music Events India",
+          },
+
+          price: {
+            type: "number",
+            format: "double",
+            minimum: 0,
+            example: 999,
+          },
+
+          banner: {
+            type: "string",
+            format: "uri",
+            example: "https://res.cloudinary.com/demo/image/upload/banner.jpg",
+          },
+
+          cloudinary_id: {
+            type: "string",
+            example: "uploads/event-banner",
+          },
+
+          locationDetails: {
+            type: "object",
+            properties: {
+              image: {
+                type: "string",
+                format: "uri",
+                example:
+                  "https://res.cloudinary.com/demo/image/upload/location.jpg",
+              },
+
+              cloudinary_id: {
+                type: "string",
+                example: "uploads/locations/location",
+              },
+
+              address: {
+                type: "string",
+                example: "Netaji Indoor Stadium, Kolkata",
+              },
+
+              facilities: {
+                type: "array",
+                items: {
+                  type: "string",
+                },
+                example: ["Parking", "Food Court", "Restrooms"],
+              },
+
+              map: {
+                type: "string",
+                format: "uri",
+                example: "https://maps.google.com/?q=Netaji+Indoor+Stadium",
+              },
+            },
+          },
+
+          artist: {
+            type: "object",
+            properties: {
+              artistName: {
+                type: "string",
+                example: "Arijit Singh",
+              },
+
+              profileImage: {
+                type: "string",
+                format: "uri",
+                example:
+                  "https://res.cloudinary.com/demo/image/upload/artist.jpg",
+              },
+
+              cloudinary_id: {
+                type: "string",
+                example: "uploads/artists/artist",
+              },
+
+              artistDescription: {
+                type: "string",
+                example: "Indian playback singer and live performer.",
+              },
+            },
+          },
+
+          status: {
+            type: "string",
+            enum: ["active", "inactive"],
+            example: "active",
+          },
+
+          createdBy: {
+            $ref: "#/components/schemas/User",
+          },
+
+          createdAt: {
+            type: "string",
+            format: "date-time",
+          },
+
+          updatedAt: {
+            type: "string",
+            format: "date-time",
+          },
         },
       },
+
+      Like: {
+        type: "object",
+        properties: {
+          _id: {
+            type: "string",
+            example: "68like12345678912345678",
+          },
+
+          eventId: {
+            type: "string",
+            example: "68abc123456789123456789",
+          },
+
+          userId: {
+            type: "string",
+            example: "68usr123456789123456789",
+          },
+
+          createdAt: {
+            type: "string",
+            format: "date-time",
+          },
+
+          updatedAt: {
+            type: "string",
+            format: "date-time",
+          },
+        },
+      },
+
+      Rating: {
+        type: "object",
+        properties: {
+          _id: {
+            type: "string",
+            example: "68rating1234567891234567",
+          },
+
+          eventId: {
+            type: "string",
+            example: "68abc123456789123456789",
+          },
+
+          userId: {
+            type: "string",
+            example: "68usr123456789123456789",
+          },
+
+          rating: {
+            type: "integer",
+            minimum: 1,
+            maximum: 5,
+            example: 5,
+          },
+
+          createdAt: {
+            type: "string",
+            format: "date-time",
+          },
+
+          updatedAt: {
+            type: "string",
+            format: "date-time",
+          },
+        },
+      },
+      
       TicketTier: {
         type: "object",
         properties: {

@@ -11,6 +11,10 @@ const newsletterRoutes = require("./newsletterRoutes");
 
 const eventRoutes = require("./eventRoutes");
 
+const ratingRoutes = require("./ratingRoutes");
+
+const likeRoutes = require("./likeRoutes");
+
 const userRoutes = require("./userRoutes");
 
 const blogRouter = require("./blogRoutes");
@@ -31,13 +35,17 @@ const analyticsRoutes = require("./analyticsRoutes");
 
 router.use("/api/v1/auth", authRoutes);
 
-router.use("/api/v2/event", eventRoutes);
 router.use("/api/v1/blog", blogRouter);
+
 router.use("/api/v1/contact", contactRoutes);
 
 router.use("/api/v1/newsletter", newsletterRoutes);
 
 router.use("/api/v1/event", eventRoutes);
+
+router.use("/api/v1/rating", ratingRoutes);
+
+router.use("/api/v1/like", likeRoutes);
 
 router.use("/api/v1/user", userRoutes);
 

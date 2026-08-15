@@ -14,7 +14,13 @@ const notificationSchema = new mongoose.Schema(
 
     type: {
       type: String,
-      enum: ["event_created", "event_updated", "event_deleted"],
+      enum: [
+        "event_created",
+        "event_updated",
+        "event_deleted",
+        "event_activated",
+        "event_deactivated",
+      ],
       required: true,
     },
 
@@ -37,7 +43,7 @@ const notificationSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-    versionKey: false
+    versionKey: false,
   },
 );
 
