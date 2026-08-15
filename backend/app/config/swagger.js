@@ -164,11 +164,6 @@ const swaggerDefinition = {
             example: "68cat123456789123456789",
           },
 
-          categoryName: {
-            type: "string",
-            example: "Live Music",
-          },
-
           location: {
             type: "string",
             example: "Netaji Indoor Stadium",
@@ -269,7 +264,7 @@ const swaggerDefinition = {
                 example: "Indian playback singer and live performer.",
               },
             },
-            
+
             socialLinks: {
               type: "object",
               properties: {
