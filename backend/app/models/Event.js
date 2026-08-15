@@ -103,6 +103,28 @@ const EventSchema = new mongoose.Schema(
         trim: true,
         required: true,
       },
+      
+      socialLinks: {
+        youtube: {
+          type: String,
+          trim: true,
+        },
+
+        instagram: {
+          type: String,
+          trim: true,
+        },
+
+        facebook: {
+          type: String,
+          trim: true,
+        },
+
+        x: {
+          type: String,
+          trim: true,
+        },
+      },
     },
 
     // Event banner

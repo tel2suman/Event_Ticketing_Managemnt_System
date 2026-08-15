@@ -23,9 +23,7 @@ const router = express.Router();
  * /api/v1/event/create-event:
  *   post:
  *     summary: Create a new event
- *     description: >
- *       Admin can create an event only under an active category.
- *       Banner, location image, and artist profile image are required.
+ *     description: Create an event under an active category with banner, location image, artist profile image, artist social links, and location details.
  *     tags:
  *       - Event
  *     security:
@@ -69,8 +67,6 @@ const router = express.Router();
  *
  *               location:
  *                 type: string
- *                 minLength: 2
- *                 maxLength: 200
  *                 example: "Netaji Indoor Stadium"
  *
  *               date:
@@ -80,7 +76,7 @@ const router = express.Router();
  *
  *               time:
  *                 type: string
- *                 example: "18:30"
+ *                 example: "18:00"
  *
  *               organizer:
  *                 type: string
@@ -88,14 +84,13 @@ const router = express.Router();
  *
  *               price:
  *                 type: number
- *                 format: double
  *                 minimum: 0
  *                 example: 999
  *
  *               categoryId:
  *                 type: string
- *                 pattern: "^[a-fA-F0-9]{24}$"
- *                 example: "68abc123456789123456789"
+ *                 description: Active category MongoDB ObjectId
+ *                 example: "68cat123456789123456789"
  *
  *               address:
  *                 type: string
@@ -103,12 +98,12 @@ const router = express.Router();
  *
  *               facilities:
  *                 type: string
- *                 description: >
- *                   Comma-separated list of location facilities.
+ *                 description: Comma-separated list of facilities
  *                 example: "Parking, Food Court, Restrooms"
  *
  *               map:
  *                 type: string
+ *                 format: uri
  *                 example: "https://maps.google.com/?q=Netaji+Indoor+Stadium"
  *
  *               artistName:
@@ -118,6 +113,26 @@ const router = express.Router();
  *               artistDescription:
  *                 type: string
  *                 example: "Indian playback singer and live performer."
+ *
+ *               youtube:
+ *                 type: string
+ *                 format: uri
+ *                 example: "https://www.youtube.com/@artist"
+ *
+ *               instagram:
+ *                 type: string
+ *                 format: uri
+ *                 example: "https://www.instagram.com/artist"
+ *
+ *               facebook:
+ *                 type: string
+ *                 format: uri
+ *                 example: "https://www.facebook.com/artist"
+ *
+ *               x:
+ *                 type: string
+ *                 format: uri
+ *                 example: "https://x.com/artist"
  *
  *               status:
  *                 type: string
@@ -160,31 +175,13 @@ const router = express.Router();
  *                   $ref: "#/components/schemas/Event"
  *
  *       400:
- *         description: Validation error or missing image
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "All fields are required"
- *                 errors:
- *                   type: array
- *                   items:
- *                     type: string
+ *         description: Validation error, missing fields, or inactive category
  *
  *       401:
  *         description: Authentication token required
  *
- *       403:
- *         description: Admin access required
- *
  *       404:
- *         description: Selected category is inactive or does not exist
+ *         description: Category not found or inactive
  *
  *       409:
  *         description: Event already exists
@@ -430,11 +427,7 @@ router.get("/events/category/:categoryId",
  * /api/v1/event/update-event/{eventId}:
  *   put:
  *     summary: Update an event
- *     description: >
- *       Admin can update one or multiple event fields.
- *       The current event category must be active.
- *       If categoryId is changed, the new category must also be active.
- *       Images are optional and are replaced only when a new image is provided.
+ *     description: Update any single event field or multiple event fields. Supports updating event details, category, location details, artist details, social media links, and images.
  *     tags:
  *       - Event
  *     security:
@@ -462,23 +455,21 @@ router.get("/events/category/:categoryId",
  *                 type: string
  *                 minLength: 2
  *                 maxLength: 200
- *                 example: "Live Music Night Updated"
+ *                 example: "Updated Live Music Night"
  *
  *               description:
  *                 type: string
  *                 minLength: 5
- *                 example: "Updated live music experience."
+ *                 example: "Updated event description."
  *
  *               location:
  *                 type: string
- *                 minLength: 2
- *                 maxLength: 200
- *                 example: "Eco Park, Kolkata"
+ *                 example: "Eden Gardens"
  *
  *               date:
  *                 type: string
  *                 format: date
- *                 example: "2026-10-10"
+ *                 example: "2026-10-15"
  *
  *               time:
  *                 type: string
@@ -490,28 +481,27 @@ router.get("/events/category/:categoryId",
  *
  *               price:
  *                 type: number
- *                 format: double
  *                 minimum: 0
- *                 example: 1499
+ *                 example: 1299
  *
  *               categoryId:
  *                 type: string
- *                 pattern: "^[a-fA-F0-9]{24}$"
- *                 example: "68abc123456789123456789"
+ *                 description: New active category MongoDB ObjectId
+ *                 example: "68cat123456789123456789"
  *
  *               address:
  *                 type: string
- *                 example: "Eco Park, Kolkata"
+ *                 example: "Eden Gardens, Kolkata"
  *
  *               facilities:
  *                 type: string
- *                 description: >
- *                   Comma-separated list of location facilities.
- *                 example: "Parking, Food Court, VIP Lounge"
+ *                 description: Comma-separated list of facilities
+ *                 example: "Parking, VIP Lounge, Food Court"
  *
  *               map:
  *                 type: string
- *                 example: "https://maps.google.com/?q=Eco+Park+Kolkata"
+ *                 format: uri
+ *                 example: "https://maps.google.com/?q=Eden+Gardens"
  *
  *               artistName:
  *                 type: string
@@ -520,6 +510,26 @@ router.get("/events/category/:categoryId",
  *               artistDescription:
  *                 type: string
  *                 example: "Updated artist description."
+ *
+ *               youtube:
+ *                 type: string
+ *                 format: uri
+ *                 example: "https://www.youtube.com/@artist"
+ *
+ *               instagram:
+ *                 type: string
+ *                 format: uri
+ *                 example: "https://www.instagram.com/artist"
+ *
+ *               facebook:
+ *                 type: string
+ *                 format: uri
+ *                 example: "https://www.facebook.com/artist"
+ *
+ *               x:
+ *                 type: string
+ *                 format: uri
+ *                 example: "https://x.com/artist"
  *
  *               status:
  *                 type: string
@@ -561,24 +571,10 @@ router.get("/events/category/:categoryId",
  *                   $ref: "#/components/schemas/Event"
  *
  *       400:
- *         description: Invalid request or inactive category
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Cannot update event because its category is inactive"
+ *         description: Invalid data, inactive current category, or selected category is inactive
  *
  *       401:
  *         description: Authentication token required
- *
- *       403:
- *         description: Admin access required
  *
  *       404:
  *         description: Event not found
