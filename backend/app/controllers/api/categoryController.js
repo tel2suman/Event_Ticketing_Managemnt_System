@@ -101,8 +101,22 @@ class CategoryController {
 
   // get all categories
   async getAllCategories(req, res) {
+
     try {
-      const categories = await Category.find({ isActive: true })
+
+      const { categoryName } = req.query;
+
+      const query = {};
+
+      // Search category by name
+      if (categoryName) {
+        query.categoryName = {
+          $regex: categoryName.trim(),
+          $options: "i",
+        };
+      }
+
+      const categories = await Category.find(query)
         .sort({ createdAt: -1 })
         .select("categoryName createdAt updatedAt");
 
@@ -137,7 +151,7 @@ class CategoryController {
         message: "Active categories fetched successfully",
         data: categories,
       });
-      
+
     } catch (error) {
       console.error("Get Active Categories Error:", error);
       return res.status(HttpStatusCode.SERVER_ERROR).json({
