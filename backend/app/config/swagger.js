@@ -52,6 +52,11 @@ const swaggerDefinition = {
         "Pricing tiers per event (e.g. VIP/General) — admin-managed, publicly readable.",
     },
     {
+      name: "Speaker",
+      description:
+        "Inspiring Motivational Speakers at the stage, who will give lectures before / after the event",
+    },
+    {
       name: "Ticket",
       description:
         "Ticket purchase (reservation), user dashboard, cancellation, admin QR/manual check-in, event sales report.",
@@ -400,6 +405,99 @@ const swaggerDefinition = {
           updatedAt: { type: "string", format: "date-time" },
         },
       },
+      Speaker: {
+        type: "object",
+        properties: {
+          _id: {
+            type: "string",
+            example: "68a123456789012345678901",
+          },
+
+          lectureDate: {
+            type: "string",
+            format: "date-time",
+            example: "2026-09-25T00:00:00.000Z",
+          },
+
+          lectureTime: {
+            type: "string",
+            example: "18:30",
+          },
+
+          speakerName: {
+            type: "string",
+            example: "John Doe",
+          },
+
+          speakerImage: {
+            type: "string",
+            format: "uri",
+            example:
+              "https://res.cloudinary.com/demo/image/upload/speakers/john-doe.jpg",
+          },
+
+          cloudinary_id: {
+            type: "string",
+            example: "uploads/speakers/john-doe",
+          },
+
+          speakerDesignation: {
+            type: "string",
+            example: "Senior Software Architect",
+          },
+
+          speakerBio: {
+            type: "string",
+            example: "Experienced software architect and technology speaker.",
+          },
+
+          socialLinks: {
+            type: "object",
+            properties: {
+              linkedin: {
+                type: "string",
+                format: "uri",
+                example: "https://www.linkedin.com/in/johndoe",
+              },
+
+              instagram: {
+                type: "string",
+                format: "uri",
+                example: "https://www.instagram.com/johndoe",
+              },
+
+              x: {
+                type: "string",
+                format: "uri",
+                example: "https://x.com/johndoe",
+              },
+
+              facebook: {
+                type: "string",
+                format: "uri",
+                example: "https://www.facebook.com/johndoe",
+              },
+            },
+          },
+
+          createdBy: {
+            $ref: "#/components/schemas/User",
+          },
+
+          createdAt: {
+            type: "string",
+            format: "date-time",
+            example: "2026-08-18T10:30:00.000Z",
+          },
+
+          updatedAt: {
+            type: "string",
+            format: "date-time",
+            example: "2026-08-18T11:30:00.000Z",
+          },
+        },
+      },
+      
       Ticket: {
         type: "object",
         properties: {
