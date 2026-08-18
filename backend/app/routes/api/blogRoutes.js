@@ -1,53 +1,123 @@
 const express = require("express");
+
 const AuthMiddleware = require("../../middlewares/authMiddleware");
 const RoleMiddleware = require("../../middlewares/roleMiddleware");
 const blogController = require("../../controllers/api/blogController");
 const Upload = require("../../utils/CloudinaryImageUpload");
+
 const blogRouter = express.Router();
 
 /**
  * @swagger
  * tags:
  *   name: Blog
- *   description: Blog CRUD + editorial workflow (draft/publish/schedule/trash/restore).
+ *   description: Blog CRUD and publishing management
  */
 
 /**
  * @swagger
- * /api/v1/blog/create:
+ * /api/v1/blog:
  *   post:
  *     tags: [Blog]
- *     summary: Create a blog post (multipart/form-data)
+ *     summary: Create a new blog
+ *     description: Admin can create a blog with category, author, tags, featured image and publishing status.
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
  *         multipart/form-data:
  *           schema:
  *             type: object
- *             required: [title, excerpt, content, category]
+ *             required:
+ *               - title
+ *               - excerpt
+ *               - content
+ *               - category
+ *               - author
  *             properties:
- *               title: { type: string }
- *               excerpt: { type: string }
- *               content: { type: string }
- *               category: { type: string }
- *               status: { type: string, enum: [Draft, Published, Scheduled] }
- *               featuredImage: { type: string, format: binary }
+ *               title:
+ *                 type: string
+ *                 minLength: 5
+ *                 maxLength: 150
+ *                 example: "Top Music Events in 2026"
+ *
+ *               excerpt:
+ *                 type: string
+ *                 minLength: 20
+ *                 maxLength: 250
+ *                 example: "Discover the biggest music events happening in 2026."
+ *
+ *               content:
+ *                 type: string
+ *                 minLength: 50
+ *                 example: "Music events are one of the most exciting experiences..."
+ *
+ *               category:
+ *                 type: string
+ *                 format: objectId
+ *                 example: "68a123456789abcdef123456"
+ *                 description: MongoDB Category ObjectId
+ *
+ *               tags:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["Music", "Events", "Entertainment"]
+ *
+ *               author:
+ *                 type: string
+ *                 example: "Raktim Bhattacharya"
+ *
+ *               status:
+ *                 type: string
+ *                 enum:
+ *                   - Draft
+ *                   - Published
+ *                   - Scheduled
+ *                 default: Draft
+ *
+ *               publishDate:
+ *                 type: string
+ *                 format: date-time
+ *                 example: "2026-08-25T10:00:00.000Z"
+ *
+ *               slug:
+ *                 type: string
+ *                 example: "top-music-events-in-2026"
+ *
+ *               metaTitle:
+ *                 type: string
+ *                 example: "Top Music Events in 2026"
+ *
+ *               metaDescription:
+ *                 type: string
+ *                 example: "A complete guide to the top music events happening in 2026."
+ *
+ *               featuredImage:
+ *                 type: string
+ *                 format: binary
+ *
  *     responses:
  *       201:
- *         description: Blog created
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success: { type: boolean }
- *                 data: { $ref: '#/components/schemas/Blog' }
- *       400: { $ref: '#/components/responses/BadRequest' }
+ *         description: Blog created successfully
+ *
+ *       400:
+ *         $ref: '#/components/responses/BadRequest'
+ *
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *
+ *       403:
+ *         $ref: '#/components/responses/Forbidden'
+ *
+ *       409:
+ *         description: Blog title or slug already exists
  */
-// Create Blog
 blogRouter.post(
-  "/create",
+  "/",
   AuthMiddleware,
+  RoleMiddleware("admin"),
   Upload.single("featuredImage"),
   blogController.createBlog,
 );
@@ -57,22 +127,20 @@ blogRouter.post(
  * /api/v1/blog:
  *   get:
  *     tags: [Blog]
- *     summary: Get all blogs (admin only)
+ *     summary: Get all blogs
+ *     description: Admin can retrieve all non-deleted blogs.
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Blogs
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success: { type: boolean }
- *                 data:
- *                   type: array
- *                   items: { $ref: '#/components/schemas/Blog' }
- *       403: { $ref: '#/components/responses/Forbidden' }
+ *         description: Blogs fetched successfully
+ *
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *
+ *       403:
+ *         $ref: '#/components/responses/Forbidden'
  */
-// Get All Blogs
 blogRouter.get(
   "/",
   AuthMiddleware,
@@ -85,47 +153,67 @@ blogRouter.get(
  * /api/v1/blog/published:
  *   get:
  *     tags: [Blog]
- *     summary: Get published blogs
+ *     summary: Get all published blogs
+ *     description: Retrieves all blogs with Published status.
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Published blogs
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success: { type: boolean }
- *                 data:
- *                   type: array
- *                   items: { $ref: '#/components/schemas/Blog' }
- *       401: { $ref: '#/components/responses/Unauthorized' }
+ *         description: Published blogs fetched successfully
+ *
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
  */
-// Get Published Blogs (User)
-blogRouter.get("/published",AuthMiddleware, blogController.getPublishedBlogs);
+blogRouter.get("/published", AuthMiddleware, blogController.getPublishedBlogs);
+
+/**
+ * @swagger
+ * /api/v1/blog/slug/{slug}:
+ *   get:
+ *     tags: [Blog]
+ *     summary: Get blog by slug
+ *     description: Retrieves a published blog using its SEO-friendly slug.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: slug
+ *         required: true
+ *         description: Blog slug
+ *         schema:
+ *           type: string
+ *         example: "top-music-events-in-2026"
+ *     responses:
+ *       200:
+ *         description: Blog fetched successfully
+ *
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *
+ *       404:
+ *         $ref: '#/components/responses/NotFound'
+ */
+blogRouter.get("/slug/:slug", AuthMiddleware, blogController.getBlogBySlug);
 
 /**
  * @swagger
  * /api/v1/blog/trash:
  *   get:
  *     tags: [Blog]
- *     summary: Get trashed (soft-deleted) blogs (admin only)
+ *     summary: Get trashed blogs
+ *     description: Admin can retrieve all soft-deleted blogs.
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Trashed blogs
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success: { type: boolean }
- *                 data:
- *                   type: array
- *                   items: { $ref: '#/components/schemas/Blog' }
- *       403: { $ref: '#/components/responses/Forbidden' }
+ *         description: Trashed blogs fetched successfully
+ *
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *
+ *       403:
+ *         $ref: '#/components/responses/Forbidden'
  */
-// Trash Blogs
-// Must be declared before the "/:id" route below — otherwise Express
-// matches "/trash" as the ":id" param and this route is never reached.
 blogRouter.get(
   "/trash",
   AuthMiddleware,
@@ -138,61 +226,123 @@ blogRouter.get(
  * /api/v1/blog/{id}:
  *   get:
  *     tags: [Blog]
- *     summary: Get a single blog
+ *     summary: Get blog by ID
+ *     description: Retrieves a single non-deleted blog by its MongoDB ObjectId.
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - $ref: '#/components/parameters/IdParam'
  *     responses:
  *       200:
- *         description: Blog
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success: { type: boolean }
- *                 data: { $ref: '#/components/schemas/Blog' }
- *       404: { $ref: '#/components/responses/NotFound' }
+ *         description: Blog fetched successfully
+ *
+ *       400:
+ *         $ref: '#/components/responses/BadRequest'
+ *
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *
+ *       404:
+ *         $ref: '#/components/responses/NotFound'
  */
-// Get Single Blog
 blogRouter.get("/:id", AuthMiddleware, blogController.getBlogById);
 
 /**
  * @swagger
- * /api/v1/blog/update/{id}:
+ * /api/v1/blog/{id}:
  *   put:
  *     tags: [Blog]
- *     summary: Update a blog (admin only, multipart/form-data, all fields optional)
+ *     summary: Update a blog
+ *     description: Admin can update blog details and optionally replace the featured image.
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - $ref: '#/components/parameters/IdParam'
  *     requestBody:
+ *       required: true
  *       content:
  *         multipart/form-data:
  *           schema:
  *             type: object
  *             properties:
- *               title: { type: string }
- *               excerpt: { type: string }
- *               content: { type: string }
- *               category: { type: string }
- *               status: { type: string, enum: [Draft, Published, Scheduled] }
- *               publishDate: { type: string, format: date-time }
- *               featuredImage: { type: string, format: binary }
+ *               title:
+ *                 type: string
+ *                 minLength: 5
+ *                 maxLength: 150
+ *                 example: "Updated Music Events in 2026"
+ *
+ *               excerpt:
+ *                 type: string
+ *                 minLength: 20
+ *                 maxLength: 250
+ *                 example: "Updated description of music events."
+ *
+ *               content:
+ *                 type: string
+ *                 minLength: 50
+ *                 example: "Updated blog content..."
+ *
+ *               category:
+ *                 type: string
+ *                 format: objectId
+ *                 example: "68a123456789abcdef123456"
+ *
+ *               tags:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["Music", "Concert", "Events"]
+ *
+ *               author:
+ *                 type: string
+ *                 example: "Raktim Bhattacharya"
+ *
+ *               status:
+ *                 type: string
+ *                 enum:
+ *                   - Draft
+ *                   - Published
+ *                   - Scheduled
+ *
+ *               publishDate:
+ *                 type: string
+ *                 format: date-time
+ *                 example: "2026-08-25T10:00:00.000Z"
+ *
+ *               slug:
+ *                 type: string
+ *                 example: "updated-music-events-2026"
+ *
+ *               metaTitle:
+ *                 type: string
+ *                 example: "Updated Music Events 2026"
+ *
+ *               metaDescription:
+ *                 type: string
+ *                 example: "Updated information about music events."
+ *
+ *               featuredImage:
+ *                 type: string
+ *                 format: binary
+ *
  *     responses:
  *       200:
- *         description: Blog updated
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success: { type: boolean }
- *                 data: { $ref: '#/components/schemas/Blog' }
- *       404: { $ref: '#/components/responses/NotFound' }
- *       403: { $ref: '#/components/responses/Forbidden' }
+ *         description: Blog updated successfully
+ *
+ *       400:
+ *         $ref: '#/components/responses/BadRequest'
+ *
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *
+ *       403:
+ *         $ref: '#/components/responses/Forbidden'
+ *
+ *       404:
+ *         $ref: '#/components/responses/NotFound'
  */
-// Update Blog
 blogRouter.put(
-  "/update/:id",
+  "/:id",
   AuthMiddleware,
   RoleMiddleware("admin"),
   Upload.single("featuredImage"),
@@ -204,19 +354,25 @@ blogRouter.put(
  * /api/v1/blog/draft/{id}:
  *   patch:
  *     tags: [Blog]
- *     summary: Set a blog's status back to Draft (admin only)
+ *     summary: Save blog as draft
+ *     description: Changes the blog status to Draft.
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - $ref: '#/components/parameters/IdParam'
  *     responses:
  *       200:
- *         description: Set to Draft
- *         content:
- *           application/json:
- *             schema: { $ref: '#/components/schemas/SuccessMessage' }
- *       404: { $ref: '#/components/responses/NotFound' }
- *       403: { $ref: '#/components/responses/Forbidden' }
+ *         description: Blog saved as draft successfully
+ *
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *
+ *       403:
+ *         $ref: '#/components/responses/Forbidden'
+ *
+ *       404:
+ *         $ref: '#/components/responses/NotFound'
  */
-// Save As Draft
 blogRouter.patch(
   "/draft/:id",
   AuthMiddleware,
@@ -229,19 +385,25 @@ blogRouter.patch(
  * /api/v1/blog/publish/{id}:
  *   patch:
  *     tags: [Blog]
- *     summary: Publish a blog now (admin only)
+ *     summary: Publish blog immediately
+ *     description: Changes the blog status to Published and sets the current publish date.
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - $ref: '#/components/parameters/IdParam'
  *     responses:
  *       200:
- *         description: Published
- *         content:
- *           application/json:
- *             schema: { $ref: '#/components/schemas/SuccessMessage' }
- *       404: { $ref: '#/components/responses/NotFound' }
- *       403: { $ref: '#/components/responses/Forbidden' }
+ *         description: Blog published successfully
+ *
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *
+ *       403:
+ *         $ref: '#/components/responses/Forbidden'
+ *
+ *       404:
+ *         $ref: '#/components/responses/NotFound'
  */
-// Publish Blog
 blogRouter.patch(
   "/publish/:id",
   AuthMiddleware,
@@ -254,7 +416,10 @@ blogRouter.patch(
  * /api/v1/blog/schedule/{id}:
  *   patch:
  *     tags: [Blog]
- *     summary: Schedule a blog for a future publishDate (admin only)
+ *     summary: Schedule a blog
+ *     description: Schedule a blog for a future publish date.
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - $ref: '#/components/parameters/IdParam'
  *     requestBody:
@@ -263,19 +428,29 @@ blogRouter.patch(
  *         application/json:
  *           schema:
  *             type: object
- *             required: [publishDate]
+ *             required:
+ *               - publishDate
  *             properties:
- *               publishDate: { type: string, format: date-time }
+ *               publishDate:
+ *                 type: string
+ *                 format: date-time
+ *                 example: "2026-08-25T10:00:00.000Z"
  *     responses:
  *       200:
- *         description: Scheduled
- *         content:
- *           application/json:
- *             schema: { $ref: '#/components/schemas/SuccessMessage' }
- *       400: { $ref: '#/components/responses/BadRequest' }
- *       404: { $ref: '#/components/responses/NotFound' }
+ *         description: Blog scheduled successfully
+ *
+ *       400:
+ *         $ref: '#/components/responses/BadRequest'
+ *
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *
+ *       403:
+ *         $ref: '#/components/responses/Forbidden'
+ *
+ *       404:
+ *         $ref: '#/components/responses/NotFound'
  */
-// Schedule Blog
 blogRouter.patch(
   "/schedule/:id",
   AuthMiddleware,
@@ -283,27 +458,32 @@ blogRouter.patch(
   blogController.scheduleBlog,
 );
 
-
 /**
  * @swagger
- * /api/v1/blog/delete/{id}:
+ * /api/v1/blog/{id}:
  *   delete:
  *     tags: [Blog]
- *     summary: Soft-delete a blog / move to trash (admin only)
+ *     summary: Move blog to trash
+ *     description: Soft deletes a blog by setting isDeleted to true.
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - $ref: '#/components/parameters/IdParam'
  *     responses:
  *       200:
- *         description: Deleted
- *         content:
- *           application/json:
- *             schema: { $ref: '#/components/schemas/SuccessMessage' }
- *       404: { $ref: '#/components/responses/NotFound' }
- *       403: { $ref: '#/components/responses/Forbidden' }
+ *         description: Blog moved to trash successfully
+ *
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *
+ *       403:
+ *         $ref: '#/components/responses/Forbidden'
+ *
+ *       404:
+ *         $ref: '#/components/responses/NotFound'
  */
-// Soft Delete
 blogRouter.delete(
-  "/delete/:id",
+  "/:id",
   AuthMiddleware,
   RoleMiddleware("admin"),
   blogController.deleteBlog,
@@ -314,19 +494,25 @@ blogRouter.delete(
  * /api/v1/blog/restore/{id}:
  *   patch:
  *     tags: [Blog]
- *     summary: Restore a trashed blog (admin only)
+ *     summary: Restore blog
+ *     description: Restores a soft-deleted blog from trash.
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - $ref: '#/components/parameters/IdParam'
  *     responses:
  *       200:
- *         description: Restored
- *         content:
- *           application/json:
- *             schema: { $ref: '#/components/schemas/SuccessMessage' }
- *       404: { $ref: '#/components/responses/NotFound' }
- *       403: { $ref: '#/components/responses/Forbidden' }
+ *         description: Blog restored successfully
+ *
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *
+ *       403:
+ *         $ref: '#/components/responses/Forbidden'
+ *
+ *       404:
+ *         $ref: '#/components/responses/NotFound'
  */
-// Restore Blog
 blogRouter.patch(
   "/restore/:id",
   AuthMiddleware,
@@ -339,23 +525,29 @@ blogRouter.patch(
  * /api/v1/blog/permanent-delete/{id}:
  *   delete:
  *     tags: [Blog]
- *     summary: Permanently delete a blog (admin only, irreversible)
+ *     summary: Permanently delete blog
+ *     description: Permanently deletes a blog and its featured image from Cloudinary. This action cannot be undone.
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - $ref: '#/components/parameters/IdParam'
  *     responses:
  *       200:
- *         description: Permanently deleted
- *         content:
- *           application/json:
- *             schema: { $ref: '#/components/schemas/SuccessMessage' }
- *       404: { $ref: '#/components/responses/NotFound' }
- *       403: { $ref: '#/components/responses/Forbidden' }
+ *         description: Blog permanently deleted
+ *
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *
+ *       403:
+ *         $ref: '#/components/responses/Forbidden'
+ *
+ *       404:
+ *         $ref: '#/components/responses/NotFound'
  */
-// Permanent Delete
 blogRouter.delete(
   "/permanent-delete/:id",
-  AuthMiddleware,
   RoleMiddleware("admin"),
+  AuthMiddleware,
   blogController.permanentDelete,
 );
 
