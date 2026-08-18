@@ -27,6 +27,8 @@ const wishListRoutes = require("./wishlistRoutes");
 
 const ticketTierRoutes = require("./ticketTierRoutes");
 
+const speakerRoutes = require("./speakerRoutes");
+
 const ticketRoutes = require("./ticketRoutes");
 
 const paymentRoutes = require("./paymentRoutes");
@@ -58,6 +60,8 @@ router.use("/api/v1/cart", cartRoutes);
 router.use("/api/v1/wishlist", wishListRoutes);
 
 router.use("/api/v1/ticket-tier", ticketTierRoutes);
+
+router.use("/api/v1/speaker", speakerRoutes);
 
 router.use("/api/v2/ticket", ticketRoutes);
 
