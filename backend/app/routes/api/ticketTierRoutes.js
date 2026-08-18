@@ -32,14 +32,25 @@ const router = express.Router();
  *         application/json:
  *           schema:
  *             type: object
- *             required: [eventId, name, price, quantityAvailable]
+ *             required: [eventId, name, price]
  *             properties:
  *               eventId: { type: string }
  *               name: { type: string, example: "VIP" }
  *               price: { type: number, example: 2000 }
- *               quantityAvailable: { type: integer, example: 100 }
+ *               description: { type: string, maxLength: 150, example: "A closer experience with premium viewing." }
+ *               quantityAvailable: { type: integer, example: 100, description: "Required unless hasAssignedSeating is true" }
  *               benefits: { type: array, items: { type: string } }
  *               isActive: { type: boolean, default: true }
+ *               hasAssignedSeating: { type: boolean, default: false }
+ *               seatLabels: { type: array, items: { type: string }, description: "Required when hasAssignedSeating is true, e.g. ['A1','A2']" }
+ *               refundPolicyOverride:
+ *                 type: array
+ *                 description: "Per-tier refund policy; omit to use the platform default"
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     minHoursBeforeEvent: { type: number }
+ *                     percentage: { type: number }
  *     responses:
  *       201:
  *         description: Tier created
@@ -81,6 +92,7 @@ router.post(
  *             properties:
  *               name: { type: string }
  *               price: { type: number }
+ *               description: { type: string, maxLength: 150 }
  *               quantityAvailable: { type: integer }
  *               benefits: { type: array, items: { type: string } }
  *               isActive: { type: boolean }
@@ -246,6 +258,80 @@ router.delete(
   AuthMiddleware,
   RoleMiddleware("admin"),
   TicketTierController.deleteTicketTier,
+);
+
+// ==============================
+// CAPACITY ROLLUP FOR ONE EVENT (admin) — sold/available across all tiers
+// ==============================
+/**
+ * @swagger
+ * /api/v1/ticket-tier/capacity/event/{eventId}:
+ *   get:
+ *     tags: [Ticket Tier]
+ *     summary: Capacity rollup for one event — sum of sold/available across all active tiers (admin only)
+ *     parameters:
+ *       - { name: eventId, in: path, required: true, schema: { type: string } }
+ *     responses:
+ *       200:
+ *         description: Capacity summary
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     eventId: { type: string }
+ *                     totalAvailable: { type: integer }
+ *                     totalSold: { type: integer }
+ *                     totalRemaining: { type: integer }
+ *       403: { $ref: '#/components/responses/Forbidden' }
+ */
+router.get(
+  "/capacity/event/:eventId",
+  AuthMiddleware,
+  RoleMiddleware("admin"),
+  TicketTierController.getCapacitySummaryForEvent,
+);
+
+// ==============================
+// CAPACITY ROLLUP FOR MULTIPLE EVENTS (admin) — one call for a listing table
+// ==============================
+/**
+ * @swagger
+ * /api/v1/ticket-tier/capacity/bulk:
+ *   post:
+ *     tags: [Ticket Tier]
+ *     summary: Capacity rollup for several events in one call (admin only)
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [eventIds]
+ *             properties:
+ *               eventIds: { type: array, items: { type: string } }
+ *     responses:
+ *       200:
+ *         description: Capacity summary keyed by eventId
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 data: { type: object }
+ *       400: { $ref: '#/components/responses/BadRequest' }
+ *       403: { $ref: '#/components/responses/Forbidden' }
+ */
+router.post(
+  "/capacity/bulk",
+  AuthMiddleware,
+  RoleMiddleware("admin"),
+  TicketTierController.getCapacitySummaryBulk,
 );
 
 module.exports = router;

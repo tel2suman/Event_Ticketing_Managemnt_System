@@ -19,6 +19,24 @@ const purchaseTicketValidation = Joi.object({
     "number.min": "Quantity must be at least 1",
     "number.max": "You can purchase a maximum of 10 tickets at a time",
   }),
+
+  // Required only when buying from an assigned-seating tier — the
+  // controller cross-checks this against the tier's own
+  // hasAssignedSeating flag. When provided, its length is what actually
+  // determines the ticket count (overrides `quantity`).
+  seatLabels: Joi.array().items(Joi.string().trim()).min(1).max(10).messages({
+    "array.base": "seatLabels must be a list of seat labels",
+    "array.min": "Select at least one seat",
+    "array.max": "You can select a maximum of 10 seats at a time",
+  }),
+});
+
+// transferTicket validation
+const transferTicketValidation = Joi.object({
+  recipientEmail: Joi.string().trim().email().required().messages({
+    "string.email": "A valid recipient email is required",
+    "any.required": "Recipient email is required",
+  }),
 });
 
 // checkInTicket validation (admin scanning at the gate)
@@ -40,4 +58,5 @@ const checkInTicketValidation = Joi.object({
 module.exports = {
   purchaseTicketValidation,
   checkInTicketValidation,
+  transferTicketValidation,
 };

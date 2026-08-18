@@ -15,8 +15,18 @@ const REFUND_TIERS = [
   { minHoursBeforeEvent: 0, percentage: 0 },
 ];
 
-// Returns { eligible, percentage, hoursUntilEvent, reason }
-const getRefundEligibility = (event) => {
+// Returns { eligible, percentage, hoursUntilEvent, reason }.
+// `customTiers` — pass a tier's TicketTier.refundPolicyOverride here to
+// use a per-tier policy instead of the platform-wide default (e.g. an
+// organizer marking one VIP tier non-refundable while everything else
+// follows the standard policy). Falls back to REFUND_TIERS when the
+// override is missing/empty.
+const getRefundEligibility = (event, customTiers) => {
+  const tiers =
+    Array.isArray(customTiers) && customTiers.length > 0
+      ? customTiers
+      : REFUND_TIERS;
+
   const eventDateTime = new Date(`${event.date}T${event.time || "00:00"}`);
   const hoursUntilEvent = (eventDateTime.getTime() - Date.now()) / (1000 * 60 * 60);
 
@@ -38,9 +48,10 @@ const getRefundEligibility = (event) => {
     };
   }
 
-  // REFUND_TIERS is ordered from largest threshold to smallest, so the
-  // first tier whose threshold we've already cleared is the right one.
-  for (const tier of REFUND_TIERS) {
+  // Tiers are expected ordered from largest threshold to smallest, so
+  // the first tier whose threshold we've already cleared is the right
+  // one.
+  for (const tier of tiers) {
     if (hoursUntilEvent >= tier.minHoursBeforeEvent) {
       return {
         eligible: tier.percentage > 0,

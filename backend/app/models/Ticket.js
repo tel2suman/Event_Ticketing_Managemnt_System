@@ -51,6 +51,29 @@ const ticketSchema = new mongoose.Schema(
       required: true,
     },
 
+    // Only set when the tier this ticket belongs to has assigned
+    // seating (TicketTier.hasAssignedSeating). Null for regular
+    // general-admission tickets, exactly as today.
+    seatLabel: {
+      type: String,
+      default: null,
+    },
+
+    // Ownership transfer history — see ticketController.transferTicket.
+    // The ticketCode/QR stays the same across a transfer; only `userId`
+    // (current owner) changes, with each hop logged here for an audit
+    // trail.
+    transferHistory: {
+      type: [
+        {
+          fromUserId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+          toUserId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+          transferredAt: { type: Date, default: Date.now },
+        },
+      ],
+      default: [],
+    },
+
     paymentStatus: {
       type: String,
       enum: ["pending", "paid", "failed"],

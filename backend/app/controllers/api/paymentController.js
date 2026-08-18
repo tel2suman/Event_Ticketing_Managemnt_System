@@ -5,6 +5,14 @@ const TicketTier = require("../../models/TicketTier");
 const HttpStatusCode = require("../../utils/httpStatusCode");
 const { sendTicketConfirmationEmail } = require("../../utils/ticketEmailHelper");
 const { getRefundEligibility } = require("../../utils/refundPolicy");
+const { calculateFees } = require("../../utils/feeCalculator");
+const { releaseSeat, markSeatSold } = require("../../utils/ticketStockHelper");
+const {
+  applyCoupon,
+  applyGiftCard,
+  releaseCouponAndGiftCard,
+} = require("../../utils/couponGiftCardHelper");
+const { notify } = require("../../utils/notify");
 const {
   verifyOrderSignature,
   verifyWebhookSignature,
@@ -34,13 +42,15 @@ async function releaseTicket(ticket) {
   await TicketTier.findByIdAndUpdate(ticket.tierId, {
     $inc: { quantitySold: -1 },
   });
+
+  await releaseSeat(ticket);
 }
 
 class PaymentController {
   // create a Razorpay order for a previously-reserved ticket order
   async createOrder(req, res) {
     try {
-      const { orderId } = req.body;
+      const { orderId, billingDetails, couponCode, giftCardCode } = req.body;
       const userId = req.user._id;
 
       const tickets = await Ticket.find({ orderId });
@@ -81,39 +91,145 @@ class PaymentController {
         });
       }
 
-      const amount = tickets.reduce((sum, t) => sum + t.priceAtPurchase, 0);
+      const baseAmount = tickets.reduce((sum, t) => sum + t.priceAtPurchase, 0);
+
+      // Convenience fee + tax breakdown — see utils/feeCalculator.js.
+      // `totalAmount` (base + fees) is what's actually charged via
+      // Razorpay; refunds deliberately work off `priceAtPurchase` per
+      // ticket (base only), so the fee portion is non-refundable — same
+      // as how BookMyShow/Ticketmaster-style convenience fees behave.
+      const { convenienceFee, taxOnFee, totalFees, totalAmount } =
+        calculateFees(baseAmount);
 
       // Reuse an existing Payment doc for this order if one was already
       // created (e.g. user refreshed the page before paying), instead of
-      // creating a duplicate Razorpay order every time.
+      // creating a duplicate Razorpay order — and instead of re-applying
+      // (and thus double-consuming) whatever coupon/gift-card the first
+      // call already reserved.
       let payment = await Payment.findOne({ orderId });
 
-      if (payment && payment.status === "created") {
+      if (payment && (payment.status === "created" || payment.status === "paid")) {
         return res.status(HttpStatusCode.SUCCESS).json({
           success: true,
-          message: "Order already created",
+          message:
+            payment.status === "paid" ? "Order already paid" : "Order already created",
           data: {
             razorpayOrderId: payment.razorpayOrderId,
             amount: payment.amount,
+            feeBreakdown: payment.feeBreakdown,
+            discountAmount: payment.discountAmount,
+            giftCardAmountUsed: payment.giftCardAmountUsed,
+            status: payment.status,
             currency: payment.currency,
             razorpayKeyId: process.env.RAZORPAY_KEY_ID,
           },
         });
       }
 
+      // Coupon first (percentage/flat off the subtotal), then gift card
+      // eats into whatever's left — same order real checkouts use, since
+      // a gift card is meant to cover a final balance, not be discounted
+      // itself.
+      const subtotal = baseAmount + totalFees;
+      let discountAmount = 0;
+      let giftCardAmountUsed = 0;
+      let couponApplied = false;
+
+      try {
+        const couponResult = await applyCoupon({
+          code: couponCode,
+          orderAmount: subtotal,
+          eventId: tickets[0].eventId,
+        });
+        discountAmount = couponResult.discountAmount;
+        couponApplied = !!couponResult.coupon;
+
+        const giftCardResult = await applyGiftCard({
+          code: giftCardCode,
+          remainingAmount: subtotal - discountAmount,
+          orderId,
+        });
+        giftCardAmountUsed = giftCardResult.amountUsed;
+      } catch (couponOrGiftCardError) {
+        // If the coupon already got reserved (usedCount incremented)
+        // before the gift-card step failed, undo it — otherwise the
+        // coupon use leaks with no Payment ever created to redeem it.
+        if (couponApplied) {
+          await releaseCouponAndGiftCard({
+            couponCode: couponCode.toUpperCase().trim(),
+            giftCardCode: null,
+            giftCardAmountUsed: 0,
+          });
+        }
+
+        return res.status(HttpStatusCode.BAD_REQUEST).json({
+          success: false,
+          message: couponOrGiftCardError.message,
+        });
+      }
+
+      const totalAmountAfterDiscounts = Math.max(
+        Math.round((totalAmount - discountAmount - giftCardAmountUsed) * 100) / 100,
+        0,
+      );
+
+      const basePaymentFields = {
+        orderId,
+        userId,
+        eventId: tickets[0].eventId,
+        amount: totalAmountAfterDiscounts,
+        feeBreakdown: { baseAmount, convenienceFee, taxOnFee, totalFees },
+        billingDetails: billingDetails || undefined,
+        couponCode: couponCode ? couponCode.toUpperCase().trim() : null,
+        discountAmount,
+        giftCardCode: giftCardCode ? giftCardCode.toUpperCase().trim() : null,
+        giftCardAmountUsed,
+      };
+
+      // Fully covered by coupon + gift card — nothing left to charge via
+      // Razorpay. Mark it paid immediately instead of creating a ₹0
+      // Razorpay order (Razorpay requires a minimum non-zero amount).
+      if (totalAmountAfterDiscounts <= 0) {
+        payment = await Payment.create({
+          ...basePaymentFields,
+          razorpayOrderId: `FREE-${orderId}`,
+          status: "paid",
+          paidAt: new Date(),
+        });
+
+        await Promise.all(tickets.map(markSeatSold));
+
+        await Ticket.updateMany(
+          { orderId },
+          { $set: { paymentStatus: "paid" } },
+        );
+
+        sendTicketConfirmationEmail(orderId);
+        notify({
+          userId,
+          eventId: tickets[0].eventId,
+          type: "payment_success",
+          title: "Booking confirmed",
+          message: `Your booking ${orderId} is confirmed — fully covered by your coupon/gift card.`,
+        });
+
+        return res.status(HttpStatusCode.CREATED).json({
+          success: true,
+          message: "Order fully covered by coupon/gift card — booking confirmed",
+          data: { orderId, amount: 0, status: "paid" },
+        });
+      }
+
       // Razorpay expects the amount in the smallest currency unit
       // (paise for INR), so multiply rupees by 100.
       const razorpayOrder = await razorpayInstance.orders.create({
-        amount: Math.round(amount * 100),
+        amount: Math.round(totalAmountAfterDiscounts * 100),
         currency: "INR",
         receipt: orderId,
       });
 
       payment = await Payment.create({
-        orderId,
-        userId,
-        eventId: tickets[0].eventId,
-        amount,
+        ...basePaymentFields,
         razorpayOrderId: razorpayOrder.id,
         status: "created",
       });
@@ -123,7 +239,10 @@ class PaymentController {
         message: "Razorpay order created",
         data: {
           razorpayOrderId: razorpayOrder.id,
-          amount,
+          amount: totalAmountAfterDiscounts,
+          feeBreakdown: { baseAmount, convenienceFee, taxOnFee, totalFees },
+          discountAmount,
+          giftCardAmountUsed,
           currency: "INR",
           // Public key — safe to expose to the frontend, it's not the secret
           razorpayKeyId: process.env.RAZORPAY_KEY_ID,
@@ -184,6 +303,15 @@ class PaymentController {
 
         const tickets = await Ticket.find({ orderId: payment.orderId });
         await Promise.all(tickets.map(releaseTicket));
+        await releaseCouponAndGiftCard(payment);
+
+        notify({
+          userId: payment.userId,
+          eventId: payment.eventId,
+          type: "payment_failed",
+          title: "Payment failed",
+          message: `We couldn't verify your payment for booking ${payment.orderId}. Your seats have been released.`,
+        });
 
         return res.status(HttpStatusCode.BAD_REQUEST).json({
           success: false,
@@ -197,15 +325,24 @@ class PaymentController {
       payment.paidAt = new Date();
       await payment.save();
 
+      const paidTickets = await Ticket.find({ orderId: payment.orderId });
       await Ticket.updateMany(
         { orderId: payment.orderId },
         { $set: { paymentStatus: "paid" } },
       );
+      await Promise.all(paidTickets.map(markSeatSold));
 
       // Fire-and-forget: don't await, so a slow SMTP server never delays
       // the payment confirmation response. Errors are caught and logged
       // inside the helper itself, never bubble up here.
       sendTicketConfirmationEmail(payment.orderId);
+      notify({
+        userId: payment.userId,
+        eventId: payment.eventId,
+        type: "payment_success",
+        title: "Payment successful",
+        message: `Your payment for booking ${payment.orderId} was successful. Your tickets are confirmed.`,
+      });
 
       return res.status(HttpStatusCode.SUCCESS).json({
         success: true,
@@ -257,12 +394,21 @@ class PaymentController {
           payment.paidAt = new Date();
           await payment.save();
 
+          const paidTickets = await Ticket.find({ orderId: payment.orderId });
           await Ticket.updateMany(
             { orderId: payment.orderId },
             { $set: { paymentStatus: "paid" } },
           );
+          await Promise.all(paidTickets.map(markSeatSold));
 
           sendTicketConfirmationEmail(payment.orderId);
+          notify({
+            userId: payment.userId,
+            eventId: payment.eventId,
+            type: "payment_success",
+            title: "Payment successful",
+            message: `Your payment for booking ${payment.orderId} was successful. Your tickets are confirmed.`,
+          });
         }
       }
 
@@ -280,6 +426,15 @@ class PaymentController {
 
           const tickets = await Ticket.find({ orderId: payment.orderId });
           await Promise.all(tickets.map(releaseTicket));
+          await releaseCouponAndGiftCard(payment);
+
+          notify({
+            userId: payment.userId,
+            eventId: payment.eventId,
+            type: "payment_failed",
+            title: "Payment failed",
+            message: `Your payment for booking ${payment.orderId} failed. Your seats have been released.`,
+          });
         }
       }
 
@@ -379,6 +534,14 @@ class PaymentController {
       payment.refundedAt = refundedAt;
       await payment.save();
 
+      notify({
+        userId: payment.userId,
+        eventId: payment.eventId,
+        type: "refund_processed",
+        title: "Refund processed",
+        message: `₹${refundAmount} has been refunded for booking ${payment.orderId}.`,
+      });
+
       return res.status(HttpStatusCode.SUCCESS).json({
         success: true,
         message: `Refunded ${refundableTickets.length} ticket(s) totaling ₹${refundAmount}`,
@@ -386,6 +549,125 @@ class PaymentController {
       });
     } catch (error) {
       console.error("Refund Payment Error:", error);
+
+      return res.status(HttpStatusCode.SERVER_ERROR).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  // admin: refund every paid order for an entire event in one call — the
+  // "we had to cancel the whole event" case. Reuses the same per-payment
+  // refund logic as refundPayment above, just looped across every Payment
+  // tied to this event. Runs sequentially (not Promise.all) to stay
+  // gentle on Razorpay's rate limits and to keep error reporting simple.
+  async refundAllForEvent(req, res) {
+    try {
+      const { eventId } = req.params;
+
+      const payments = await Payment.find({ eventId, status: "paid" });
+
+      if (payments.length === 0) {
+        return res.status(HttpStatusCode.SUCCESS).json({
+          success: true,
+          message: "No paid orders found for this event — nothing to refund",
+          data: { refunded: 0, failed: 0, results: [] },
+        });
+      }
+
+      const results = [];
+
+      for (const payment of payments) {
+        try {
+          const allTickets = await Ticket.find({ orderId: payment.orderId });
+
+          const refundableTickets = allTickets.filter(
+            (ticket) => !ticket.checkedIn && ticket.refundedAmount === 0,
+          );
+
+          if (refundableTickets.length === 0) {
+            results.push({
+              orderId: payment.orderId,
+              status: "skipped",
+              reason: "No refundable tickets (already refunded or checked in)",
+            });
+            continue;
+          }
+
+          const refundAmount = refundableTickets.reduce(
+            (sum, ticket) => sum + ticket.priceAtPurchase,
+            0,
+          );
+
+          const refund = await razorpayInstance.payments.refund(
+            payment.razorpayPaymentId,
+            { amount: Math.round(refundAmount * 100) },
+          );
+
+          const refundedAt = new Date();
+
+          for (const ticket of refundableTickets) {
+            payment.refunds.push({
+              ticketId: ticket._id,
+              razorpayRefundId: refund.id,
+              amount: ticket.priceAtPurchase,
+              refundedAt,
+            });
+
+            ticket.refundedAmount = ticket.priceAtPurchase;
+            await releaseTicket(ticket);
+          }
+
+          const stillRefundable = await Ticket.exists({
+            orderId: payment.orderId,
+            checkedIn: false,
+            refundedAmount: 0,
+          });
+
+          payment.status = stillRefundable ? "paid" : "refunded";
+          payment.refundId = refund.id;
+          payment.refundedAt = refundedAt;
+          await payment.save();
+
+          notify({
+            userId: payment.userId,
+            eventId: payment.eventId,
+            type: "refund_processed",
+            title: "Event cancelled — refund processed",
+            message: `₹${refundAmount} has been refunded for booking ${payment.orderId} because the event was cancelled.`,
+          });
+
+          results.push({
+            orderId: payment.orderId,
+            status: "refunded",
+            amount: refundAmount,
+            ticketsRefunded: refundableTickets.length,
+          });
+        } catch (perPaymentError) {
+          console.error(
+            `Refund All For Event — order ${payment.orderId} failed:`,
+            perPaymentError.message,
+          );
+
+          results.push({
+            orderId: payment.orderId,
+            status: "failed",
+            reason: perPaymentError.message,
+          });
+        }
+      }
+
+      const refunded = results.filter((r) => r.status === "refunded").length;
+      const failed = results.filter((r) => r.status === "failed").length;
+
+      return res.status(HttpStatusCode.SUCCESS).json({
+        success: true,
+        message: `Processed ${payments.length} order(s) for this event: ${refunded} refunded, ${failed} failed`,
+        data: { refunded, failed, results },
+      });
+    } catch (error) {
+      console.error("Refund All For Event Error:", error);
 
       return res.status(HttpStatusCode.SERVER_ERROR).json({
         success: false,
@@ -441,7 +723,16 @@ class PaymentController {
         });
       }
 
-      const eligibility = getRefundEligibility(ticket.eventId);
+      // Use this tier's own refund policy if the organizer set one
+      // (TicketTier.refundPolicyOverride), otherwise getRefundEligibility
+      // falls back to the platform-wide default.
+      const tier = await TicketTier.findById(ticket.tierId).select(
+        "refundPolicyOverride",
+      );
+      const eligibility = getRefundEligibility(
+        ticket.eventId,
+        tier?.refundPolicyOverride,
+      );
 
       if (!eligibility.eligible) {
         return res.status(HttpStatusCode.BAD_REQUEST).json({
@@ -491,6 +782,14 @@ class PaymentController {
 
       ticket.refundedAmount = refundAmount;
       await releaseTicket(ticket);
+
+      notify({
+        userId: ticket.userId,
+        eventId: payment.eventId,
+        type: "refund_processed",
+        title: "Refund processed",
+        message: `₹${refundAmount} (${eligibility.percentage}% per policy) has been refunded for your ticket ${ticket.ticketCode}.`,
+      });
 
       return res.status(HttpStatusCode.SUCCESS).json({
         success: true,

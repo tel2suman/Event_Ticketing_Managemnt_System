@@ -36,9 +36,18 @@ const router = express.Router();
  *             required: [orderId]
  *             properties:
  *               orderId: { type: string }
+ *               billingDetails:
+ *                 type: object
+ *                 description: Optional billing/invoice details captured at checkout
+ *                 properties:
+ *                   name: { type: string }
+ *                   phone: { type: string }
+ *                   email: { type: string }
+ *                   nationality: { type: string, enum: ["Indian Resident", "International Visitor"] }
+ *                   state: { type: string }
  *     responses:
  *       201:
- *         description: Razorpay order created
+ *         description: Razorpay order created. `amount` is the grand total (base + fees) actually charged.
  *         content:
  *           application/json:
  *             schema:
@@ -49,7 +58,14 @@ const router = express.Router();
  *                   type: object
  *                   properties:
  *                     razorpayOrderId: { type: string }
- *                     amount: { type: number }
+ *                     amount: { type: number, description: "Grand total (base + fees)" }
+ *                     feeBreakdown:
+ *                       type: object
+ *                       properties:
+ *                         baseAmount: { type: number }
+ *                         convenienceFee: { type: number }
+ *                         taxOnFee: { type: number }
+ *                         totalFees: { type: number }
  *                     currency: { type: string }
  *                     razorpayKeyId: { type: string }
  *       400: { $ref: '#/components/responses/BadRequest' }
@@ -247,6 +263,45 @@ router.post(
   validationMiddleware.validate(refundPaymentValidation),
   RoleMiddleware("admin"),
   PaymentController.refundPayment,
+);
+
+// ==============================
+// REFUND ALL PAID ORDERS FOR AN EVENT (admin — event got cancelled)
+// ==============================
+/**
+ * @swagger
+ * /api/v2/payment/refund-event/{eventId}:
+ *   post:
+ *     tags: [Payment]
+ *     summary: Refund every paid order for an entire event (admin only)
+ *     description: >
+ *       Use this when a whole event is cancelled — refunds every refundable
+ *       ticket (not checked in, not already refunded) across every paid
+ *       order for the event, one Razorpay refund call per order.
+ *     parameters:
+ *       - { name: eventId, in: path, required: true, schema: { type: string } }
+ *     responses:
+ *       200:
+ *         description: Refund batch processed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     refunded: { type: integer }
+ *                     failed: { type: integer }
+ *                     results: { type: array, items: { type: object } }
+ *       403: { $ref: '#/components/responses/Forbidden' }
+ */
+router.post(
+  "/refund-event/:eventId",
+  AuthMiddleware,
+  RoleMiddleware("admin"),
+  PaymentController.refundAllForEvent,
 );
 
 module.exports = router;

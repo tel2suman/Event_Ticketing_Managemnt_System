@@ -41,6 +41,34 @@ router.get(
 );
 
 // ==============================
+// TICKET STATS (admin "Tickets Details" screen stat tiles)
+// ==============================
+/**
+ * @swagger
+ * /api/v2/analytics/ticket-stats:
+ *   get:
+ *     tags: [Analytics]
+ *     summary: Total/Booked/Available/Cancelled ticket counts + growth % (admin only)
+ *     responses:
+ *       200:
+ *         description: Ticket stats
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 data: { type: object }
+ *       403: { $ref: '#/components/responses/Forbidden' }
+ */
+router.get(
+  "/ticket-stats",
+  AuthMiddleware,
+  RoleMiddleware("admin"),
+  AnalyticsController.getTicketStats,
+);
+
+// ==============================
 // PER-EVENT ANALYTICS (tier-wise sales + check-in breakdown)
 // ==============================
 /**
@@ -105,6 +133,107 @@ router.get(
   AuthMiddleware,
   RoleMiddleware("admin"),
   AnalyticsController.getRevenueTrend,
+);
+
+// ==============================
+// RECENT EVENTS (admin dashboard "Recent Events" table)
+// ==============================
+/**
+ * @swagger
+ * /api/v2/analytics/recent-events:
+ *   get:
+ *     tags: [Analytics]
+ *     summary: Most recently created events with tickets-sold/revenue (admin only)
+ *     parameters:
+ *       - { name: limit, in: query, schema: { type: integer, default: 5 } }
+ *     responses:
+ *       200:
+ *         description: Recent events
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *       403: { $ref: '#/components/responses/Forbidden' }
+ */
+router.get(
+  "/recent-events",
+  AuthMiddleware,
+  RoleMiddleware("admin"),
+  AnalyticsController.getRecentEvents,
+);
+
+// ==============================
+// TOP EVENTS (admin dashboard "Top Events" list, ranked by tickets sold)
+// ==============================
+/**
+ * @swagger
+ * /api/v2/analytics/top-events:
+ *   get:
+ *     tags: [Analytics]
+ *     summary: Events ranked by tickets sold (admin only)
+ *     parameters:
+ *       - { name: limit, in: query, schema: { type: integer, default: 5 } }
+ *     responses:
+ *       200:
+ *         description: Top events
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *       403: { $ref: '#/components/responses/Forbidden' }
+ */
+router.get(
+  "/top-events",
+  AuthMiddleware,
+  RoleMiddleware("admin"),
+  AnalyticsController.getTopEvents,
+);
+
+// ==============================
+// PAYMENT METHOD BREAKDOWN (admin)
+// ==============================
+/**
+ * @swagger
+ * /api/v2/analytics/payment-methods:
+ *   get:
+ *     tags: [Analytics]
+ *     summary: Paid revenue broken down by payment method (admin only)
+ *     responses:
+ *       200:
+ *         description: Breakdown
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       method: { type: string }
+ *                       count: { type: integer }
+ *                       totalAmount: { type: number }
+ *       403: { $ref: '#/components/responses/Forbidden' }
+ */
+router.get(
+  "/payment-methods",
+  AuthMiddleware,
+  RoleMiddleware("admin"),
+  AnalyticsController.getPaymentMethodBreakdown,
 );
 
 module.exports = router;

@@ -24,10 +24,63 @@ const paymentSchema = new mongoose.Schema(
     },
 
     amount: {
-      // stored in rupees (not paise) for readability in the DB/admin views
+      // Grand total actually charged to the user (base ticket price +
+      // fees below), stored in rupees (not paise) for readability in the
+      // DB/admin views.
       type: Number,
       required: true,
       min: [0, "Amount cannot be negative."],
+    },
+
+    // Convenience-fee/tax breakdown behind `amount` above. `amount` stays
+    // the single source of truth for what Razorpay actually charged;
+    // these fields exist purely so the checkout UI (and refunds, which
+    // deliberately exclude the fee — see paymentController) can show
+    // where the total came from. See utils/feeCalculator.js.
+    feeBreakdown: {
+      baseAmount: { type: Number, default: 0 },
+      convenienceFee: { type: Number, default: 0 },
+      taxOnFee: { type: Number, default: 0 },
+      totalFees: { type: Number, default: 0 },
+    },
+
+    // Billing/invoice-recipient details captured at checkout. Optional —
+    // older payments created before this field existed won't have it.
+    billingDetails: {
+      name: { type: String, default: null },
+      phone: { type: String, default: null },
+      email: { type: String, default: null },
+      nationality: {
+        type: String,
+        enum: ["Indian Resident", "International Visitor", null],
+        default: null,
+      },
+      state: { type: String, default: null },
+    },
+
+    // Coupon applied at checkout, if any. Redemption (Coupon.usedCount)
+    // is reserved when this Payment is created and rolled back if the
+    // payment later fails/expires — see utils/couponGiftCardHelper.js.
+    couponCode: {
+      type: String,
+      default: null,
+    },
+
+    discountAmount: {
+      type: Number,
+      default: 0,
+    },
+
+    // Gift card applied at checkout, if any. Same reserve/rollback
+    // pattern as the coupon above.
+    giftCardCode: {
+      type: String,
+      default: null,
+    },
+
+    giftCardAmountUsed: {
+      type: Number,
+      default: 0,
     },
 
     currency: {

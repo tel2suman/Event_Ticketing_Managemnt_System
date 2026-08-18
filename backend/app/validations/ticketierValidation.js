@@ -1,5 +1,10 @@
 const Joi = require("joi");
 
+const refundPolicyOverrideItem = Joi.object({
+  minHoursBeforeEvent: Joi.number().min(0).required(),
+  percentage: Joi.number().min(0).max(100).required(),
+});
+
 // createTicketTier validation
 const createTicketTierValidation = Joi.object({
   eventId: Joi.string().hex().length(24).required().messages({
@@ -21,17 +26,48 @@ const createTicketTierValidation = Joi.object({
     "any.required": "Price is required",
   }),
 
-  quantityAvailable: Joi.number().integer().min(1).required().messages({
-    "number.base": "Available quantity must be a number",
-    "number.min": "Available quantity must be at least 1",
-    "any.required": "Available quantity is required",
+  description: Joi.string().trim().max(150).allow("").default("").messages({
+    "string.max": "Description cannot exceed 150 characters",
   }),
+
+  // For a plain general-admission tier, this is required directly. For
+  // an assigned-seating tier (hasAssignedSeating: true), it's derived
+  // from seatLabels.length instead — see ticketTierController.
+  quantityAvailable: Joi.number()
+    .integer()
+    .min(1)
+    .when("hasAssignedSeating", {
+      is: true,
+      then: Joi.optional(),
+      otherwise: Joi.required(),
+    })
+    .messages({
+      "number.base": "Available quantity must be a number",
+      "number.min": "Available quantity must be at least 1",
+      "any.required": "Available quantity is required",
+    }),
 
   benefits: Joi.array().items(Joi.string().trim()).default([]).messages({
     "array.base": "Benefits must be a list of strings",
   }),
 
   isActive: Joi.boolean().default(true),
+
+  hasAssignedSeating: Joi.boolean().default(false),
+
+  seatLabels: Joi.array()
+    .items(Joi.string().trim())
+    .when("hasAssignedSeating", {
+      is: true,
+      then: Joi.array().min(1).required(),
+      otherwise: Joi.optional(),
+    })
+    .messages({
+      "array.min": "At least one seat label is required for an assigned-seating tier",
+      "any.required": "seatLabels is required when hasAssignedSeating is true",
+    }),
+
+  refundPolicyOverride: Joi.array().items(refundPolicyOverrideItem).default([]),
 });
 
 // updateTicketTier validation
@@ -46,6 +82,10 @@ const updateTicketTierValidation = Joi.object({
     "number.min": "Price cannot be negative",
   }),
 
+  description: Joi.string().trim().max(150).allow("").messages({
+    "string.max": "Description cannot exceed 150 characters",
+  }),
+
   quantityAvailable: Joi.number().integer().min(0).messages({
     "number.base": "Available quantity must be a number",
     "number.min": "Available quantity cannot be negative",
@@ -56,6 +96,8 @@ const updateTicketTierValidation = Joi.object({
   }),
 
   isActive: Joi.boolean(),
+
+  refundPolicyOverride: Joi.array().items(refundPolicyOverrideItem),
 });
 
 module.exports = {

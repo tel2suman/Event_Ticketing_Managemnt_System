@@ -5,6 +5,22 @@ const createPaymentOrderValidation = Joi.object({
   orderId: Joi.string().required().messages({
     "any.required": "Order ID is required",
   }),
+
+  // Billing/invoice details — optional so existing frontend calls that
+  // don't send them yet don't start failing validation.
+  billingDetails: Joi.object({
+    name: Joi.string().trim().min(2).max(100),
+    phone: Joi.string().trim().min(7).max(15),
+    email: Joi.string().trim().email(),
+    nationality: Joi.string().valid("Indian Resident", "International Visitor"),
+    state: Joi.string().trim().max(100),
+  }).messages({
+    "object.base": "Billing details must be an object",
+  }),
+
+  couponCode: Joi.string().trim().max(30),
+
+  giftCardCode: Joi.string().trim().max(30),
 });
 
 // verifyPayment validation

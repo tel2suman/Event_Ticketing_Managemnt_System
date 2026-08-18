@@ -33,6 +33,8 @@ const paymentRoutes = require("./paymentRoutes");
 
 const analyticsRoutes = require("./analyticsRoutes");
 
+const couponRoutes = require("./couponRoutes");
+
 router.use("/api/v1/auth", authRoutes);
 
 router.use("/api/v1/blog", blogRouter);
@@ -62,5 +64,7 @@ router.use("/api/v2/ticket", ticketRoutes);
 router.use("/api/v2/payment", paymentRoutes);
 
 router.use("/api/v2/analytics", analyticsRoutes);
+
+router.use("/api/v2/coupon", couponRoutes);
 
 module.exports = router;
