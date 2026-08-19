@@ -37,6 +37,18 @@ const analyticsRoutes = require("./analyticsRoutes");
 
 const couponRoutes = require("./couponRoutes");
 
+const campaignRoutes = require("./campaignRoutes");
+
+const mediaHighlightRoutes = require("./mediaHighlightRoutes");
+
+const galleryRoutes = require("./galleryRoutes");
+
+const partnerRoutes = require("./partnerRoutes");
+
+const faqRoutes = require("./faqRoutes");
+
+const staticPageRoutes = require("./staticPageRoutes");
+
 router.use("/api/v1/auth", authRoutes);
 
 router.use("/api/v1/blog", blogRouter);
@@ -70,5 +82,17 @@ router.use("/api/v2/payment", paymentRoutes);
 router.use("/api/v2/analytics", analyticsRoutes);
 
 router.use("/api/v2/coupon", couponRoutes);
+
+router.use("/api/v1/campaign", campaignRoutes);
+
+router.use("/api/v1/media-highlight", mediaHighlightRoutes);
+
+router.use("/api/v1/gallery", galleryRoutes);
+
+router.use("/api/v1/partner", partnerRoutes);
+
+router.use("/api/v1/faq", faqRoutes);
+
+router.use("/api/v1/static-page", staticPageRoutes);
 
 module.exports = router;

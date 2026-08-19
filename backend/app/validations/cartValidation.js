@@ -9,6 +9,13 @@ const addToCartValidation = Joi.object({
     "string.length": "Invalid Event ID",
   }),
 
+  tierId: Joi.string().trim().hex().length(24).required().messages({
+    "any.required": "Ticket tier ID is required",
+    "string.empty": "Ticket tier ID is required",
+    "string.hex": "Invalid ticket tier ID",
+    "string.length": "Invalid ticket tier ID",
+  }),
+
   quantity: Joi.number().integer().min(1).default(1).messages({
     "number.base": "Quantity must be a number",
     "number.integer": "Quantity must be an integer",

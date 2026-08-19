@@ -4,7 +4,7 @@ const Upload = require("../../utils/CloudinaryImageUpload");
 const AuthMiddleware = require("../../middlewares/authMiddleware");
 const validationMiddleware = require("../../middlewares/validationMiddleware");
 const RoleMiddleware = require("../../middlewares/roleMiddleware");
-const {createEventValidation, updateEventValidation, searchEventValidation, getEventsByCategoryValidation, filterEventsByCategoryNameValidation, getAllEventsValidation } = require("../../validations/eventValidation");
+const {createEventValidation, updateEventValidation, searchEventValidation, getEventsByCategoryValidation, filterEventsByCategoryNameValidation, getAllEventsValidation, getAdminEventsValidation } = require("../../validations/eventValidation");
 
 const router = express.Router();
 
@@ -272,6 +272,53 @@ router.get("/single-event/:id", EventController.getSingleEventById);
  *       401: { $ref: '#/components/responses/Unauthorized' }
  */
 router.get("/all-events", validationMiddleware.validate(getAllEventsValidation,"query"), EventController.getAllEvents);
+
+// ==============================
+// ADMIN EVENTS LISTING (search + status filter + category filter +
+// pagination + per-event tickets sold/capacity — admin "Events Details")
+// ==============================
+/**
+ * @swagger
+ * /api/v1/event/admin-events:
+ *   get:
+ *     tags: [Event]
+ *     summary: List events for the admin dashboard — search + status + category filter, paginated (admin only)
+ *     parameters:
+ *       - { name: page, in: query, schema: { type: integer, default: 1 } }
+ *       - { name: limit, in: query, schema: { type: integer, default: 10 } }
+ *       - { name: search, in: query, schema: { type: string }, description: "Matches title or location" }
+ *       - { name: status, in: query, schema: { type: string, enum: [active, inactive, all] } }
+ *       - { name: categoryId, in: query, schema: { type: string } }
+ *     responses:
+ *       200:
+ *         description: Paginated list of events with tickets sold/capacity
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     totalRecords: { type: integer }
+ *                     currentPage: { type: integer }
+ *                     totalPages: { type: integer }
+ *                     perPage: { type: integer }
+ *                     hasNextPage: { type: boolean }
+ *                     hasPreviousPage: { type: boolean }
+ *                 data:
+ *                   type: array
+ *                   items: { type: object }
+ *       403: { $ref: '#/components/responses/Forbidden' }
+ */
+router.get(
+  "/admin-events",
+  AuthMiddleware,
+  RoleMiddleware("admin"),
+  validationMiddleware.validate(getAdminEventsValidation, "query"),
+  EventController.getAdminEvents,
+);
 
 
 // ==============================
@@ -632,6 +679,95 @@ router.delete(
 );
 
 // ==============================
+// TRASH — LIST SOFT-DELETED EVENTS
+// ==============================
+/**
+ * @swagger
+ * /api/v1/event/trash-events:
+ *   get:
+ *     tags: [Event]
+ *     summary: List trashed (soft-deleted) events (admin only)
+ *     responses:
+ *       200:
+ *         description: Trashed events
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 count: { type: integer }
+ *                 data:
+ *                   type: array
+ *                   items: { $ref: '#/components/schemas/Event' }
+ *       403: { $ref: '#/components/responses/Forbidden' }
+ */
+router.get(
+  "/trash-events",
+  AuthMiddleware,
+  RoleMiddleware("admin"),
+  EventController.trashEvents,
+);
+
+// ==============================
+// RESTORE EVENT FROM TRASH
+// ==============================
+/**
+ * @swagger
+ * /api/v1/event/restore-event/{eventId}:
+ *   patch:
+ *     tags: [Event]
+ *     summary: Restore a trashed event (admin only)
+ *     parameters:
+ *       - $ref: '#/components/parameters/IdParam'
+ *     responses:
+ *       200:
+ *         description: Event restored
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 data: { $ref: '#/components/schemas/Event' }
+ *       404: { $ref: '#/components/responses/NotFound' }
+ *       403: { $ref: '#/components/responses/Forbidden' }
+ */
+router.patch(
+  "/restore-event/:eventId",
+  AuthMiddleware,
+  RoleMiddleware("admin"),
+  EventController.restoreEvent,
+);
+
+// ==============================
+// PERMANENTLY DELETE A TRASHED EVENT
+// ==============================
+/**
+ * @swagger
+ * /api/v1/event/permanent-delete-event/{eventId}:
+ *   delete:
+ *     tags: [Event]
+ *     summary: Permanently delete a trashed event, including its Cloudinary assets (admin only)
+ *     parameters:
+ *       - $ref: '#/components/parameters/IdParam'
+ *     responses:
+ *       200:
+ *         description: Event permanently deleted
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/SuccessMessage' }
+ *       404: { $ref: '#/components/responses/NotFound' }
+ *       403: { $ref: '#/components/responses/Forbidden' }
+ */
+router.delete(
+  "/permanent-delete-event/:eventId",
+  AuthMiddleware,
+  RoleMiddleware("admin"),
+  EventController.permanentDeleteEvent,
+);
+
+// ==============================
 // EVENT NOTIFICATION
 // ==============================
 /**
@@ -639,7 +775,7 @@ router.delete(
  * /api/v1/event/notifications:
  *   get:
  *     tags: [Event]
- *     summary: Get event notifications for the logged-in user
+ *     summary: Get admin-broadcast event-lifecycle notifications (admin only)
  *     responses:
  *       200:
  *         description: Notifications
@@ -649,13 +785,46 @@ router.delete(
  *               type: object
  *               properties:
  *                 success: { type: boolean }
+ *                 count: { type: integer }
+ *                 unreadCount: { type: integer }
  *                 data:
  *                   type: array
  *                   items: { type: object }
- *       401: { $ref: '#/components/responses/Unauthorized' }
+ *       403: { $ref: '#/components/responses/Forbidden' }
  */
-router.get("/notifications", AuthMiddleware,
-   EventController.getNotifications,
+router.get(
+  "/notifications",
+  AuthMiddleware,
+  RoleMiddleware("admin"),
+  EventController.getNotifications,
+);
+
+/**
+ * @swagger
+ * /api/v1/event/notifications/{notificationId}/read:
+ *   patch:
+ *     tags: [Event]
+ *     summary: Mark one admin-broadcast event notification as read (admin only)
+ *     parameters:
+ *       - { name: notificationId, in: path, required: true, schema: { type: string } }
+ *     responses:
+ *       200:
+ *         description: Notification marked read
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 data: { type: object }
+ *       404: { $ref: '#/components/responses/NotFound' }
+ *       403: { $ref: '#/components/responses/Forbidden' }
+ */
+router.patch(
+  "/notifications/:notificationId/read",
+  AuthMiddleware,
+  RoleMiddleware("admin"),
+  EventController.markNotificationRead,
 );
 
 // ==============================
@@ -877,5 +1046,87 @@ router.patch(
   RoleMiddleware("admin"),
   EventController.toggleEvent
 );
+
+// ==============================
+// TOGGLE FEATURED (admin only)
+// ==============================
+/**
+ * @swagger
+ * /api/v1/event/toggle-featured/{eventId}:
+ *   patch:
+ *     tags: [Event]
+ *     summary: Toggle whether an event is featured on the homepage (admin only)
+ *     parameters:
+ *       - { name: eventId, in: path, required: true, schema: { type: string } }
+ *     responses:
+ *       200:
+ *         description: Featured flag toggled
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 data: { type: object }
+ *       404: { $ref: '#/components/responses/NotFound' }
+ *       403: { $ref: '#/components/responses/Forbidden' }
+ */
+router.patch(
+  "/toggle-featured/:eventId",
+  AuthMiddleware,
+  RoleMiddleware("admin"),
+  EventController.toggleFeatured,
+);
+
+// ==============================
+// FEATURED EVENTS (public — homepage "Featured Events" rail)
+// ==============================
+/**
+ * @swagger
+ * /api/v1/event/featured:
+ *   get:
+ *     tags: [Event]
+ *     summary: Admin-curated featured events (public)
+ *     parameters:
+ *       - { name: limit, in: query, schema: { type: integer, default: 8 } }
+ *     responses:
+ *       200:
+ *         description: Featured events
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 count: { type: integer }
+ *                 data: { type: array, items: { type: object } }
+ */
+router.get("/featured", EventController.getFeaturedEvents);
+
+// ==============================
+// POPULAR EVENTS (public — homepage "Popular Events" rail, ranked by
+// tickets sold)
+// ==============================
+/**
+ * @swagger
+ * /api/v1/event/popular:
+ *   get:
+ *     tags: [Event]
+ *     summary: Events ranked by tickets sold (public)
+ *     parameters:
+ *       - { name: limit, in: query, schema: { type: integer, default: 8 } }
+ *     responses:
+ *       200:
+ *         description: Popular events
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 count: { type: integer }
+ *                 data: { type: array, items: { type: object } }
+ */
+router.get("/popular", EventController.getPopularEvents);
 
 module.exports = router;

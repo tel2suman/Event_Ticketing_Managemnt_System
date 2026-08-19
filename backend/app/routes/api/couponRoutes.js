@@ -163,6 +163,37 @@ router.post(
 );
 
 // ==============================
+// BROWSE ACTIVE OFFERS (logged-in user — "View all event/payment offers")
+// ==============================
+/**
+ * @swagger
+ * /api/v2/coupon/offers:
+ *   get:
+ *     tags: [Coupon]
+ *     summary: Browse currently-redeemable offers, without needing a code up front
+ *     parameters:
+ *       - { name: eventId, in: query, schema: { type: string }, description: "Include platform-wide offers plus ones scoped to this event" }
+ *       - { name: offerType, in: query, schema: { type: string, enum: [event, payment] } }
+ *     responses:
+ *       200:
+ *         description: Active offers
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 count: { type: integer }
+ *                 data: { type: array, items: { type: object } }
+ *       401: { $ref: '#/components/responses/Unauthorized' }
+ */
+router.get(
+  "/offers",
+  AuthMiddleware,
+  CouponController.getActiveOffers,
+);
+
+// ==============================
 // ISSUE GIFT CARD (admin)
 // ==============================
 /**

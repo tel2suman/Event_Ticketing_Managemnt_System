@@ -31,6 +31,10 @@ const createCouponValidation = Joi.object({
   }),
 
   usageLimit: Joi.number().integer().min(1).allow(null),
+
+  offerType: Joi.string().valid("event", "payment").default("event").messages({
+    "any.only": "Offer type must be 'event' or 'payment'",
+  }),
 });
 
 const updateCouponValidation = Joi.object({
@@ -42,6 +46,9 @@ const updateCouponValidation = Joi.object({
   validUntil: Joi.date(),
   usageLimit: Joi.number().integer().min(1).allow(null),
   isActive: Joi.boolean(),
+  offerType: Joi.string().valid("event", "payment").messages({
+    "any.only": "Offer type must be 'event' or 'payment'",
+  }),
 });
 
 const validateCouponValidation = Joi.object({

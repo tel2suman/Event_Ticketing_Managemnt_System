@@ -2,6 +2,9 @@ const mongoose = require("mongoose");
 const TicketTier = require("../../models/TicketTier");
 const Event = require("../../models/Event");
 const HttpStatusCode = require("../../utils/httpStatusCode");
+const {
+  refundAllTicketsForTier,
+} = require("../../utils/refundAllTicketsForTier");
 
 class TicketTierController {
   // create ticket tier
@@ -13,15 +16,16 @@ class TicketTierController {
         price,
         description,
         quantityAvailable,
-        benefits,
-        isActive,
+        // benefits, refundPolicyOverride — not in the current "Add Ticket
+        // Tier" form, commented out until the UI adds them back.
         hasAssignedSeating,
         seatLabels,
-        refundPolicyOverride,
+        saleStart,
+        saleEnd,
       } = req.body;
 
       // Check event exists
-      const event = await Event.findById(eventId);
+      const event = await Event.findOne({ _id: eventId, isDeleted: false });
 
       if (!event) {
         return res.status(HttpStatusCode.NOT_FOUND).json({
@@ -62,11 +66,12 @@ class TicketTierController {
         price,
         description: description || "",
         quantityAvailable: hasAssignedSeating ? seats.length : quantityAvailable,
-        benefits,
-        isActive,
+        // benefits and refundPolicyOverride left at their schema defaults
+        // ([]) — not settable from the current "Add Ticket Tier" form.
         hasAssignedSeating: !!hasAssignedSeating,
         seats,
-        refundPolicyOverride: refundPolicyOverride || [],
+        saleStart: saleStart || null,
+        saleEnd: saleEnd || null,
         createdBy: req.user._id,
       });
 
@@ -103,10 +108,11 @@ class TicketTierController {
         name,
         price,
         description,
-        quantityAvailable,
-        benefits,
-        isActive,
-        refundPolicyOverride,
+        // quantityAvailable, benefits, refundPolicyOverride — not in the
+        // current "Update Ticket Tier" form, commented out until the UI
+        // adds them back.
+        saleStart,
+        saleEnd,
       } = req.body;
 
       // If renaming, make sure the new name isn't already used in this event
@@ -126,17 +132,6 @@ class TicketTierController {
         }
       }
 
-      // Prevent lowering available quantity below what's already sold
-      if (
-        quantityAvailable !== undefined &&
-        quantityAvailable < tierExists.quantitySold
-      ) {
-        return res.status(HttpStatusCode.BAD_REQUEST).json({
-          success: false,
-          message: `Available quantity cannot be less than the ${tierExists.quantitySold} tickets already sold`,
-        });
-      }
-
       const ticketTier = await TicketTier.findByIdAndUpdate(
         tierId,
         {
@@ -144,10 +139,10 @@ class TicketTierController {
             ...(name && { name: name.trim() }),
             ...(price !== undefined && { price }),
             ...(description !== undefined && { description }),
-            ...(quantityAvailable !== undefined && { quantityAvailable }),
-            ...(benefits && { benefits }),
-            ...(isActive !== undefined && { isActive }),
-            ...(refundPolicyOverride !== undefined && { refundPolicyOverride }),
+            // quantityAvailable, benefits, refundPolicyOverride — not
+            // settable from the current "Update Ticket Tier" form.
+            ...(saleStart !== undefined && { saleStart }),
+            ...(saleEnd !== undefined && { saleEnd }),
           },
         },
         {
@@ -176,7 +171,7 @@ class TicketTierController {
     try {
       const { eventId } = req.params;
 
-      const event = await Event.findById(eventId);
+      const event = await Event.findOne({ _id: eventId, isDeleted: false });
 
       if (!event) {
         return res.status(HttpStatusCode.NOT_FOUND).json({
@@ -185,13 +180,9 @@ class TicketTierController {
         });
       }
 
-      // Admins see all tiers (including inactive); users only see active tiers
-      const filter =
-        req.user?.role === "admin"
-          ? { eventId }
-          : { eventId, isActive: true };
-
-      const ticketTiers = await TicketTier.find(filter).sort({ price: 1 });
+      const ticketTiers = await TicketTier.find({ eventId }).sort({
+        price: 1,
+      });
 
       return res.status(HttpStatusCode.SUCCESS).json({
         success: true,
@@ -200,6 +191,94 @@ class TicketTierController {
       });
     } catch (error) {
       console.error("Get Ticket Tiers Error:", error);
+
+      return res.status(HttpStatusCode.SERVER_ERROR).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  // admin "Ticket Tier Details" listing — platform-wide (cross-event),
+  // search + tier-type filter + pagination, none of which
+  // getTicketTiersByEvent provides since it requires picking one event
+  async getAllTicketTiers(req, res) {
+    try {
+      const page = Math.max(Number(req.query.page) || 1, 1);
+      const limit = Math.min(Number(req.query.limit) || 10, 100);
+      const skip = (page - 1) * limit;
+      const { search, type } = req.query;
+
+      const matchStage = {};
+
+      if (type) {
+        matchStage.name = { $regex: `^${type}$`, $options: "i" };
+      }
+
+      const pipeline = [
+        { $match: matchStage },
+        {
+          $lookup: {
+            from: "events",
+            localField: "eventId",
+            foreignField: "_id",
+            as: "event",
+          },
+        },
+        { $unwind: { path: "$event", preserveNullAndEmptyArrays: true } },
+        { $match: { "event.isDeleted": { $ne: true } } },
+        ...(search
+          ? [
+              {
+                $match: {
+                  $or: [
+                    { name: { $regex: search, $options: "i" } },
+                    { "event.title": { $regex: search, $options: "i" } },
+                  ],
+                },
+              },
+            ]
+          : []),
+        {
+          $project: {
+            name: 1,
+            price: 1,
+            quantityAvailable: 1,
+            quantitySold: 1,
+            saleStart: 1,
+            saleEnd: 1,
+            createdAt: 1,
+            eventId: "$event._id",
+            eventTitle: "$event.title",
+            eventLocation: "$event.location",
+            eventDate: "$event.date",
+            eventBanner: "$event.banner",
+          },
+        },
+        { $sort: { createdAt: -1 } },
+      ];
+
+      const [tiers, totalResult] = await Promise.all([
+        TicketTier.aggregate([...pipeline, { $skip: skip }, { $limit: limit }]),
+        TicketTier.aggregate([...pipeline, { $count: "total" }]),
+      ]);
+
+      const total = totalResult.length ? totalResult[0].total : 0;
+
+      return res.status(HttpStatusCode.SUCCESS).json({
+        success: true,
+        pagination: {
+          totalRecords: total,
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          perPage: limit,
+          hasNextPage: page < Math.ceil(total / limit),
+          hasPreviousPage: page > 1,
+        },
+        data: tiers,
+      });
+    } catch (error) {
+      console.error("Get All Ticket Tiers Error:", error);
 
       return res.status(HttpStatusCode.SERVER_ERROR).json({
         success: false,
@@ -240,46 +319,11 @@ class TicketTierController {
     }
   }
 
-  // deactivate ticket tier
-  async deactivateTicketTier(req, res) {
-    try {
-      const { tierId } = req.params;
-
-      const ticketTier = await TicketTier.findByIdAndUpdate(
-        tierId,
-        {
-          $set: {
-            isActive: false,
-          },
-        },
-        {
-          new: true,
-        },
-      );
-
-      if (!ticketTier) {
-        return res.status(HttpStatusCode.NOT_FOUND).json({
-          success: false,
-          message: "Ticket tier not found",
-        });
-      }
-
-      return res.status(HttpStatusCode.SUCCESS).json({
-        success: true,
-        message: "Ticket tier deactivated successfully",
-        data: ticketTier,
-      });
-    } catch (error) {
-      console.error("Deactivate Ticket Tier Error:", error);
-
-      return res.status(HttpStatusCode.SERVER_ERROR).json({
-        success: false,
-        message: error.message,
-      });
-    }
-  }
-
-  // delete ticket tier
+  // delete ticket tier (hard delete — no trash/restore for tiers). Blocked
+  // outright once every ticket in the tier is sold, since there'd be no
+  // seats left to ever resell; otherwise any already-paid tickets under
+  // this tier are fully refunded and cancelled before the tier row itself
+  // is removed.
   async deleteTicketTier(req, res) {
     try {
       const { tierId } = req.params;
@@ -293,13 +337,24 @@ class TicketTierController {
         });
       }
 
-      // Don't allow deleting a tier that already has tickets sold against it
-      if (ticketTier.quantitySold > 0) {
+      if (ticketTier.quantitySold >= ticketTier.quantityAvailable) {
         return res.status(HttpStatusCode.BAD_REQUEST).json({
           success: false,
-          message:
-            "Cannot delete a ticket tier that already has tickets sold. Deactivate it instead.",
+          message: "Cannot delete a ticket tier that is fully sold out",
         });
+      }
+
+      let refundSummary = null;
+
+      try {
+        refundSummary = await refundAllTicketsForTier(tierId, {
+          reason: "the ticket tier was removed",
+        });
+      } catch (refundError) {
+        console.error(
+          "Auto-refund on ticket tier delete failed:",
+          refundError.message,
+        );
       }
 
       await TicketTier.findByIdAndDelete(tierId);
@@ -307,6 +362,7 @@ class TicketTierController {
       return res.status(HttpStatusCode.SUCCESS).json({
         success: true,
         message: "Ticket tier deleted successfully",
+        ...(refundSummary && { refundSummary }),
       });
     } catch (error) {
       console.error("Delete Ticket Tier Error:", error);
@@ -319,8 +375,8 @@ class TicketTierController {
   }
 
   // capacity rollup for one event — sums quantityAvailable/quantitySold
-  // across every active tier, so a listing table can show a single
-  // "sold/capacity" figure instead of the raw per-tier breakdown.
+  // across every tier, so a listing table can show a single "sold/capacity"
+  // figure instead of the raw per-tier breakdown.
   async getCapacitySummaryForEvent(req, res) {
     try {
       const { eventId } = req.params;
@@ -329,7 +385,6 @@ class TicketTierController {
         {
           $match: {
             eventId: new mongoose.Types.ObjectId(eventId),
-            isActive: true,
           },
         },
         {
@@ -379,7 +434,7 @@ class TicketTierController {
       const objectIds = eventIds.map((id) => new mongoose.Types.ObjectId(id));
 
       const summaries = await TicketTier.aggregate([
-        { $match: { eventId: { $in: objectIds }, isActive: true } },
+        { $match: { eventId: { $in: objectIds } } },
         {
           $group: {
             _id: "$eventId",

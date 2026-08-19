@@ -39,18 +39,10 @@ const router = express.Router();
  *               price: { type: number, example: 2000 }
  *               description: { type: string, maxLength: 150, example: "A closer experience with premium viewing." }
  *               quantityAvailable: { type: integer, example: 100, description: "Required unless hasAssignedSeating is true" }
- *               benefits: { type: array, items: { type: string } }
- *               isActive: { type: boolean, default: true }
  *               hasAssignedSeating: { type: boolean, default: false }
  *               seatLabels: { type: array, items: { type: string }, description: "Required when hasAssignedSeating is true, e.g. ['A1','A2']" }
- *               refundPolicyOverride:
- *                 type: array
- *                 description: "Per-tier refund policy; omit to use the platform default"
- *                 items:
- *                   type: object
- *                   properties:
- *                     minHoursBeforeEvent: { type: number }
- *                     percentage: { type: number }
+ *               saleStart: { type: string, format: date-time }
+ *               saleEnd: { type: string, format: date-time }
  *     responses:
  *       201:
  *         description: Tier created
@@ -93,9 +85,8 @@ router.post(
  *               name: { type: string }
  *               price: { type: number }
  *               description: { type: string, maxLength: 150 }
- *               quantityAvailable: { type: integer }
- *               benefits: { type: array, items: { type: string } }
- *               isActive: { type: boolean }
+ *               saleStart: { type: string, format: date-time }
+ *               saleEnd: { type: string, format: date-time }
  *     responses:
  *       200:
  *         description: Tier updated
@@ -118,20 +109,20 @@ router.put(
 );
 
 // ==============================
-// GET ALL TIERS FOR AN EVENT (public — active tiers only)
+// GET ALL TIERS FOR AN EVENT (public)
 // ==============================
 /**
  * @swagger
  * /api/v1/ticket-tier/tiers/event/{eventId}:
  *   get:
  *     tags: [Ticket Tier]
- *     summary: Get active tiers for an event (public)
+ *     summary: Get tiers for an event (public)
  *     security: []
  *     parameters:
  *       - { name: eventId, in: path, required: true, schema: { type: string } }
  *     responses:
  *       200:
- *         description: Active tiers
+ *         description: Tiers
  *         content:
  *           application/json:
  *             schema:
@@ -149,19 +140,19 @@ router.get(
 );
 
 // ==============================
-// GET ALL TIERS FOR AN EVENT (admin — includes inactive tiers)
+// GET ALL TIERS FOR AN EVENT (admin)
 // ==============================
 /**
  * @swagger
  * /api/v1/ticket-tier/admin/tiers/event/{eventId}:
  *   get:
  *     tags: [Ticket Tier]
- *     summary: Get all tiers for an event, including inactive (admin only)
+ *     summary: Get tiers for an event (admin only)
  *     parameters:
  *       - { name: eventId, in: path, required: true, schema: { type: string } }
  *     responses:
  *       200:
- *         description: All tiers
+ *         description: Tiers
  *         content:
  *           application/json:
  *             schema:
@@ -178,6 +169,51 @@ router.get(
   AuthMiddleware,
   RoleMiddleware("admin"),
   TicketTierController.getTicketTiersByEvent,
+);
+
+// ==============================
+// ADMIN "Ticket Tier Details" LISTING — platform-wide, search + type
+// filter + pagination
+// ==============================
+/**
+ * @swagger
+ * /api/v1/ticket-tier/admin/all-tiers:
+ *   get:
+ *     tags: [Ticket Tier]
+ *     summary: List ticket tiers across all events — search + type filter, paginated (admin only)
+ *     parameters:
+ *       - { name: page, in: query, schema: { type: integer, default: 1 } }
+ *       - { name: limit, in: query, schema: { type: integer, default: 10 } }
+ *       - { name: search, in: query, schema: { type: string }, description: "Matches tier name or event title" }
+ *       - { name: type, in: query, schema: { type: string }, description: "Exact tier name, e.g. Gold/Silver/Platinum/Diamond" }
+ *     responses:
+ *       200:
+ *         description: Paginated list of ticket tiers with event info
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     totalRecords: { type: integer }
+ *                     currentPage: { type: integer }
+ *                     totalPages: { type: integer }
+ *                     perPage: { type: integer }
+ *                     hasNextPage: { type: boolean }
+ *                     hasPreviousPage: { type: boolean }
+ *                 data:
+ *                   type: array
+ *                   items: { type: object }
+ *       403: { $ref: '#/components/responses/Forbidden' }
+ */
+router.get(
+  "/admin/all-tiers",
+  AuthMiddleware,
+  RoleMiddleware("admin"),
+  TicketTierController.getAllTicketTiers,
 );
 
 // ==============================
@@ -207,41 +243,16 @@ router.get(
 router.get("/single-tier/:tierId", TicketTierController.getSingleTicketTier);
 
 // ==============================
-// DEACTIVATE TICKET TIER (admin)
-// ==============================
-/**
- * @swagger
- * /api/v1/ticket-tier/deactivate-tier/{tierId}:
- *   put:
- *     tags: [Ticket Tier]
- *     summary: Deactivate a ticket tier (admin only)
- *     parameters:
- *       - { name: tierId, in: path, required: true, schema: { type: string } }
- *     responses:
- *       200:
- *         description: Tier deactivated
- *         content:
- *           application/json:
- *             schema: { $ref: '#/components/schemas/SuccessMessage' }
- *       404: { $ref: '#/components/responses/NotFound' }
- *       403: { $ref: '#/components/responses/Forbidden' }
- */
-router.put(
-  "/deactivate-tier/:tierId",
-  AuthMiddleware,
-  RoleMiddleware("admin"),
-  TicketTierController.deactivateTicketTier,
-);
-
-// ==============================
-// DELETE TICKET TIER (admin)
+// DELETE TICKET TIER (admin) — hard delete, no trash/restore. Blocked if
+// the tier is fully sold out; otherwise any paid tickets under it are
+// fully refunded and cancelled before the tier row is removed.
 // ==============================
 /**
  * @swagger
  * /api/v1/ticket-tier/delete-tier/{tierId}:
  *   delete:
  *     tags: [Ticket Tier]
- *     summary: Delete a ticket tier (admin only)
+ *     summary: Delete a ticket tier (admin only). Blocked if fully sold out; otherwise refunds and cancels every paid ticket under it before deleting.
  *     parameters:
  *       - { name: tierId, in: path, required: true, schema: { type: string } }
  *     responses:
@@ -250,6 +261,7 @@ router.put(
  *         content:
  *           application/json:
  *             schema: { $ref: '#/components/schemas/SuccessMessage' }
+ *       400: { $ref: '#/components/responses/BadRequest' }
  *       404: { $ref: '#/components/responses/NotFound' }
  *       403: { $ref: '#/components/responses/Forbidden' }
  */

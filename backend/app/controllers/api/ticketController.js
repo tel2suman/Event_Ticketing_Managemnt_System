@@ -106,7 +106,7 @@ class TicketController {
       const userId = req.user._id;
 
       // 1. Validate event
-      const event = await Event.findById(eventId);
+      const event = await Event.findOne({ _id: eventId, isDeleted: false });
 
       if (!event) {
         return res.status(HttpStatusCode.NOT_FOUND).json({
@@ -132,10 +132,19 @@ class TicketController {
         });
       }
 
-      if (!tier.isActive) {
+      const now = new Date();
+
+      if (tier.saleStart && now < tier.saleStart) {
         return res.status(HttpStatusCode.BAD_REQUEST).json({
           success: false,
-          message: "This ticket tier is no longer available",
+          message: `This ticket tier is not on sale yet. Sales open on ${tier.saleStart.toISOString()}`,
+        });
+      }
+
+      if (tier.saleEnd && now > tier.saleEnd) {
+        return res.status(HttpStatusCode.BAD_REQUEST).json({
+          success: false,
+          message: "Ticket sales for this tier have closed",
         });
       }
 
@@ -168,7 +177,6 @@ class TicketController {
           const seatUpdate = await TicketTier.findOneAndUpdate(
             {
               _id: tierId,
-              isActive: true,
               "seats.label": label,
               "seats.status": "available",
             },
@@ -201,7 +209,6 @@ class TicketController {
         const updatedTier = await TicketTier.findOneAndUpdate(
           {
             _id: tierId,
-            isActive: true,
             $expr: {
               $lte: [
                 { $add: ["$quantitySold", effectiveQuantity] },
@@ -394,6 +401,49 @@ class TicketController {
       });
     } catch (error) {
       console.error("Get Single Ticket Error:", error);
+
+      return res.status(HttpStatusCode.SERVER_ERROR).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  // get every ticket in one order (owner or admin) — the "Booking
+  // Confirmed" screen's exact data need: event/tier/QR for just this
+  // purchase, not the user's entire ticket history like getMyTickets
+  async getTicketsByOrderId(req, res) {
+    try {
+      const { orderId } = req.params;
+
+      const tickets = await Ticket.find({ orderId })
+        .populate("eventId", "title date time location banner status")
+        .populate("tierId", "name price benefits");
+
+      if (tickets.length === 0) {
+        return res.status(HttpStatusCode.NOT_FOUND).json({
+          success: false,
+          message: "No tickets found for this order",
+        });
+      }
+
+      const isOwner = tickets[0].userId.toString() === req.user._id.toString();
+      const isAdmin = req.user.role === "admin";
+
+      if (!isOwner && !isAdmin) {
+        return res.status(HttpStatusCode.FORBIDDEN).json({
+          success: false,
+          message: "You are not allowed to view this order",
+        });
+      }
+
+      return res.status(HttpStatusCode.SUCCESS).json({
+        success: true,
+        count: tickets.length,
+        data: tickets,
+      });
+    } catch (error) {
+      console.error("Get Tickets By Order Id Error:", error);
 
       return res.status(HttpStatusCode.SERVER_ERROR).json({
         success: false,
@@ -766,6 +816,7 @@ class TicketController {
       const page = Math.max(Number(req.query.page) || 1, 1);
       const limit = Math.min(Number(req.query.limit) || 20, 100);
       const skip = (page - 1) * limit;
+      const now = new Date();
 
       const matchStage = {};
 
@@ -848,6 +899,10 @@ class TicketController {
           },
         },
         { $unwind: { path: "$event", preserveNullAndEmptyArrays: true } },
+        // Once an event's date has passed, its bookings drop off this
+        // admin table entirely — same rule for every status (Booked,
+        // Cancelled, Refunded alike), not just active ones.
+        { $match: { "event.date": { $gte: now } } },
         ...(req.query.search
           ? [
               {

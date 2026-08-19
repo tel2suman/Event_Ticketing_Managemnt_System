@@ -27,16 +27,17 @@ const {
  * /api/v1/cart/add-to-cart:
  *   post:
  *     tags: [Cart]
- *     summary: Add an event to the cart
+ *     summary: Add a ticket tier of an event to the cart
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
- *             required: [eventId]
+ *             required: [eventId, tierId]
  *             properties:
  *               eventId: { type: string }
+ *               tierId: { type: string }
  *               quantity: { type: integer, default: 1 }
  *     responses:
  *       201:

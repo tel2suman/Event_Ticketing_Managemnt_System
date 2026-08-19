@@ -14,6 +14,12 @@ const cartSchema = new mongoose.Schema(
       required: true,
     },
 
+    tierId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "TicketTier",
+      required: true,
+    },
+
     quantity: {
       type: Number,
       default: 1,
@@ -25,5 +31,9 @@ const cartSchema = new mongoose.Schema(
     versionKey: false,
   },
 );
+
+// One cart row per (user, event, tier) — adding the same tier again
+// increments quantity on the existing row instead of creating a duplicate.
+cartSchema.index({ userId: 1, eventId: 1, tierId: 1 }, { unique: true });
 
 module.exports = mongoose.model("Cart", cartSchema);

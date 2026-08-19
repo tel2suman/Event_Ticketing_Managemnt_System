@@ -184,6 +184,19 @@ const getAllEventsValidation = Joi.object({
   limit: Joi.number().integer().min(1).max(100).default(10),
 });
 
+// admin "Events Details" listing — search + status filter + category
+// filter + pagination, combined
+const getAdminEventsValidation = Joi.object({
+  page: Joi.number().integer().min(1).default(1),
+  limit: Joi.number().integer().min(1).max(100).default(10),
+  search: Joi.string().trim().min(1).max(100).optional(),
+  status: Joi.string().valid("active", "inactive", "all").optional(),
+  categoryId: Joi.string().hex().length(24).optional().messages({
+    "string.hex": "Invalid category ID",
+    "string.length": "Invalid category ID",
+  }),
+});
+
 module.exports = {
   createEventValidation,
   updateEventValidation,
@@ -191,4 +204,5 @@ module.exports = {
   getEventsByCategoryValidation,
   filterEventsByCategoryNameValidation,
   getAllEventsValidation,
+  getAdminEventsValidation,
 };

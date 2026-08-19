@@ -1,9 +1,68 @@
 const Event = require("../../models/Event");
 const Category = require("../../models/Category")
+const Ticket = require("../../models/Ticket");
+const Rating = require("../../models/Rating");
+const Like = require("../../models/Like");
 const Notification = require("../../models/Notification");
+const { refundAllTicketsForEvent } = require("../../utils/refundAllTicketsForEvent");
 const {uploadToCloudinary, deleteFromCloudinary} = require("../../utils/ImageUplod");
 const HttpStatusCode = require("../../utils/httpStatusCode");
 const mongoose = require("mongoose");
+
+// Enriches a list of plain event objects/documents with averageRating,
+// totalRatings, and likesCount — standalone (not a class method) so it
+// can be reused across every public listing endpoint (getAllEvents,
+// searchEvents, filterEventsByCategoryName, getFeaturedEvents,
+// getPopularEvents) without each one re-querying Rating/Like separately.
+async function attachRatingsAndLikes(events) {
+  const eventIds = events.map((event) => event._id);
+
+  if (eventIds.length === 0) {
+    return events;
+  }
+
+  const [ratings, likes] = await Promise.all([
+    Rating.aggregate([
+      { $match: { eventId: { $in: eventIds } } },
+      {
+        $group: {
+          _id: "$eventId",
+          averageRating: { $avg: "$rating" },
+          totalRatings: { $sum: 1 },
+        },
+      },
+    ]),
+    Like.aggregate([
+      { $match: { eventId: { $in: eventIds } } },
+      { $group: { _id: "$eventId", likesCount: { $sum: 1 } } },
+    ]),
+  ]);
+
+  const ratingMap = new Map(
+    ratings.map((entry) => [
+      entry._id.toString(),
+      {
+        averageRating: Math.round(entry.averageRating * 10) / 10,
+        totalRatings: entry.totalRatings,
+      },
+    ]),
+  );
+  const likeMap = new Map(likes.map((entry) => [entry._id.toString(), entry.likesCount]));
+
+  return events.map((event) => {
+    const plain = typeof event.toObject === "function" ? event.toObject() : event;
+    const id = plain._id.toString();
+    const ratingInfo = ratingMap.get(id) || { averageRating: 0, totalRatings: 0 };
+
+    return {
+      ...plain,
+      averageRating: ratingInfo.averageRating,
+      totalRatings: ratingInfo.totalRatings,
+      likesCount: likeMap.get(id) || 0,
+    };
+  });
+}
+
 class EventController {
   // create event
   async createEvent(req, res) {
@@ -228,7 +287,7 @@ class EventController {
     try {
       const { id } = req.params;
 
-      const event = await Event.findById(id).populate(
+      const event = await Event.findOne({ _id: id, isDeleted: false }).populate(
         "createdBy",
         "name email",
       );
@@ -272,6 +331,7 @@ class EventController {
           $match: {
             categoryId: new mongoose.Types.ObjectId(categoryId),
             status: "active",
+            isDeleted: false,
           },
         },
 
@@ -372,6 +432,9 @@ class EventController {
 
       const pipeline = [
         {
+          $match: { isDeleted: false },
+        },
+        {
           $lookup: {
             from: "categories",
             localField: "categoryId",
@@ -460,6 +523,7 @@ class EventController {
       ]);
 
       const total = totalResult.length ? totalResult[0].total : 0;
+      const enrichedEvents = await attachRatingsAndLikes(events);
 
       return res.status(HttpStatusCode.SUCCESS).json({
         success: true,
@@ -472,9 +536,123 @@ class EventController {
           hasNextPage: page < Math.ceil(total / limit),
           hasPreviousPage: page > 1,
         },
+        data: enrichedEvents,
+      });
+    } catch (error) {
+      return res.status(HttpStatusCode.SERVER_ERROR).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  // admin "Events Details" listing — the combined search + status
+  // filter + category filter + pagination + per-event tickets sold/
+  // capacity that getAllEvents (public, active-only)/searchEvents/
+  // filterEventsByCategoryName don't provide together
+  async getAdminEvents(req, res) {
+    try {
+      const page = Math.max(Number(req.query.page) || 1, 1);
+      const limit = Math.min(Number(req.query.limit) || 10, 100);
+      const skip = (page - 1) * limit;
+      const { search, status, categoryId } = req.query;
+
+      const matchStage = { isDeleted: false };
+
+      if (status && status !== "all") {
+        matchStage.status = status;
+      }
+
+      if (categoryId) {
+        matchStage.categoryId = new mongoose.Types.ObjectId(categoryId);
+      }
+
+      if (search) {
+        matchStage.$or = [
+          { title: { $regex: search, $options: "i" } },
+          { location: { $regex: search, $options: "i" } },
+        ];
+      }
+
+      const pipeline = [
+        { $match: matchStage },
+        {
+          $lookup: {
+            from: "categories",
+            localField: "categoryId",
+            foreignField: "_id",
+            as: "category",
+          },
+        },
+        { $unwind: { path: "$category", preserveNullAndEmptyArrays: true } },
+        {
+          $lookup: {
+            from: "tickettiers",
+            let: { eventId: "$_id" },
+            pipeline: [
+              {
+                $match: {
+                  $expr: { $eq: ["$eventId", "$$eventId"] },
+                  isActive: true,
+                },
+              },
+              {
+                $group: {
+                  _id: null,
+                  capacity: { $sum: "$quantityAvailable" },
+                  sold: { $sum: "$quantitySold" },
+                },
+              },
+            ],
+            as: "ticketStats",
+          },
+        },
+        {
+          $project: {
+            title: 1,
+            banner: 1,
+            date: 1,
+            time: 1,
+            location: 1,
+            status: 1,
+            createdAt: 1,
+            category: {
+              _id: "$category._id",
+              categoryName: "$category.categoryName",
+            },
+            ticketsSold: {
+              $ifNull: [{ $arrayElemAt: ["$ticketStats.sold", 0] }, 0],
+            },
+            ticketsCapacity: {
+              $ifNull: [{ $arrayElemAt: ["$ticketStats.capacity", 0] }, 0],
+            },
+          },
+        },
+        { $sort: { createdAt: -1 } },
+      ];
+
+      const [events, totalResult] = await Promise.all([
+        Event.aggregate([...pipeline, { $skip: skip }, { $limit: limit }]),
+        Event.aggregate([...pipeline, { $count: "total" }]),
+      ]);
+
+      const total = totalResult.length ? totalResult[0].total : 0;
+
+      return res.status(HttpStatusCode.SUCCESS).json({
+        success: true,
+        pagination: {
+          totalRecords: total,
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          perPage: limit,
+          hasNextPage: page < Math.ceil(total / limit),
+          hasPreviousPage: page > 1,
+        },
         data: events,
       });
     } catch (error) {
+      console.error("Get Admin Events Error:", error);
+
       return res.status(HttpStatusCode.SERVER_ERROR).json({
         success: false,
         message: error.message,
@@ -500,7 +678,7 @@ class EventController {
       // Find event
       // ----------------------------------------
 
-      const event = await Event.findById(eventId);
+      const event = await Event.findOne({ _id: eventId, isDeleted: false });
 
       if (!event) {
         return res.status(HttpStatusCode.NOT_FOUND).json({
@@ -821,12 +999,12 @@ class EventController {
     }
   }
 
-  // delete event
+  // delete event (soft delete — moves the event to Trash)
   async deleteEvent(req, res) {
     try {
       const { eventId } = req.params;
 
-      const event = await Event.findById(eventId);
+      const event = await Event.findOne({ _id: eventId, isDeleted: false });
 
       if (!event) {
         return res.status(HttpStatusCode.NOT_FOUND).json({
@@ -835,24 +1013,40 @@ class EventController {
         });
       }
 
-      // Delete Cloudinary image
-      if (event.cloudinary_id) {
-        await deleteFromCloudinary(event.cloudinary_id);
+      event.isDeleted = true;
+      await event.save();
+
+      // Only cascade refunds for an event that hasn't happened yet — a
+      // past event's tickets were already used/expired, so there's
+      // nothing to refund. A refund failure here (e.g. Razorpay hiccup)
+      // is logged but never blocks the delete itself.
+      let refundSummary = null;
+
+      if (event.date > new Date()) {
+        try {
+          refundSummary = await refundAllTicketsForEvent(eventId, {
+            reason: "the event was cancelled",
+          });
+        } catch (refundError) {
+          console.error(
+            "Auto-refund on event delete failed:",
+            refundError.message,
+          );
+        }
       }
 
       await Notification.create({
         title: "Event Deleted",
-        message: `${event.title} has been deleted successfully.`,
+        message: `${event.title} has been moved to trash.`,
         type: "event_deleted",
         eventId: event._id,
         createdBy: req.user._id,
       });
 
-      await Event.findByIdAndDelete(eventId);
-
       return res.status(HttpStatusCode.SUCCESS).json({
         success: true,
-        message: "Event deleted successfully",
+        message: "Event moved to trash successfully",
+        ...(refundSummary && { refundSummary }),
       });
     } catch (error) {
       return res.status(HttpStatusCode.SERVER_ERROR).json({
@@ -862,85 +1056,236 @@ class EventController {
     }
   }
 
-  // Get All Notifications
+  // list trashed (soft-deleted) events
+  async trashEvents(req, res) {
+    try {
+      const events = await Event.find({ isDeleted: true })
+        .populate("createdBy", "name email")
+        .sort({ updatedAt: -1 });
+
+      return res.status(HttpStatusCode.SUCCESS).json({
+        success: true,
+        count: events.length,
+        data: events,
+      });
+    } catch (error) {
+      console.error("Trash Events Error:", error);
+
+      return res.status(HttpStatusCode.SERVER_ERROR).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  // restore a trashed event
+  async restoreEvent(req, res) {
+    try {
+      const { eventId } = req.params;
+
+      const event = await Event.findOne({ _id: eventId, isDeleted: true });
+
+      if (!event) {
+        return res.status(HttpStatusCode.NOT_FOUND).json({
+          success: false,
+          message: "Event not found in trash",
+        });
+      }
+
+      event.isDeleted = false;
+      await event.save();
+
+      await Notification.create({
+        title: "Event Restored",
+        message: `${event.title} has been restored from trash.`,
+        type: "event_updated",
+        eventId: event._id,
+        createdBy: req.user._id,
+      });
+
+      return res.status(HttpStatusCode.SUCCESS).json({
+        success: true,
+        message: "Event restored successfully",
+        data: event,
+      });
+    } catch (error) {
+      console.error("Restore Event Error:", error);
+
+      return res.status(HttpStatusCode.SERVER_ERROR).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  // permanently delete a trashed event (irreversible — also cleans up Cloudinary assets)
+  async permanentDeleteEvent(req, res) {
+    try {
+      const { eventId } = req.params;
+
+      const event = await Event.findOne({ _id: eventId, isDeleted: true });
+
+      if (!event) {
+        return res.status(HttpStatusCode.NOT_FOUND).json({
+          success: false,
+          message: "Event not found in trash",
+        });
+      }
+
+      const cloudinaryIds = [
+        event.cloudinary_id,
+        event.locationDetails?.cloudinary_id,
+        event.artist?.cloudinary_id,
+      ].filter(Boolean);
+
+      await Promise.all(
+        cloudinaryIds.map((publicId) =>
+          deleteFromCloudinary(publicId).catch((deleteError) =>
+            console.error("Cloudinary cleanup error:", deleteError.message),
+          ),
+        ),
+      );
+
+      await Event.findByIdAndDelete(eventId);
+
+      return res.status(HttpStatusCode.SUCCESS).json({
+        success: true,
+        message: "Event permanently deleted",
+      });
+    } catch (error) {
+      console.error("Permanent Delete Event Error:", error);
+
+      return res.status(HttpStatusCode.SERVER_ERROR).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  // Get All Notifications — admin-broadcast, event-lifecycle notifications
+  // only (userId: null). Personal notifications (payment/refund/transfer)
+  // belong to TicketController.getMyNotifications instead.
   async getNotifications(req, res) {
     try {
-      const notifications = await Notification.aggregate([
-        // Join User collection
-        {
-          $lookup: {
-            from: "users",
-            localField: "createdBy",
-            foreignField: "_id",
-            as: "createdBy",
-          },
-        },
+      const [notifications, unreadCount] = await Promise.all([
+        Notification.aggregate([
+          // Broadcast notifications only — excludes personal
+          // payment/refund/transfer notifications, which carry a userId
+          { $match: { userId: null } },
 
-        // Convert createdBy array to object
-        {
-          $unwind: {
-            path: "$createdBy",
-            preserveNullAndEmptyArrays: true,
-          },
-        },
-
-        // Join Event collection
-        {
-          $lookup: {
-            from: "events",
-            localField: "eventId",
-            foreignField: "_id",
-            as: "event",
-          },
-        },
-
-        // Convert event array to object
-        {
-          $unwind: {
-            path: "$event",
-            preserveNullAndEmptyArrays: true,
-          },
-        },
-
-        // Select required fields
-        {
-          $project: {
-            _id: 1,
-            title: 1,
-            message: 1,
-            type: 1,
-            createdAt: 1,
-            updatedAt: 1,
-
-            createdBy: {
-              _id: "$createdBy._id",
-              name: "$createdBy.name",
-              email: "$createdBy.email",
-            },
-
-            event: {
-              _id: "$event._id",
-              title: "$event.title",
-              banner: "$event.banner",
+          // Join User collection
+          {
+            $lookup: {
+              from: "users",
+              localField: "createdBy",
+              foreignField: "_id",
+              as: "createdBy",
             },
           },
-        },
 
-        // Latest notification first
-        {
-          $sort: {
-            createdAt: -1,
+          // Convert createdBy array to object
+          {
+            $unwind: {
+              path: "$createdBy",
+              preserveNullAndEmptyArrays: true,
+            },
           },
-        },
+
+          // Join Event collection
+          {
+            $lookup: {
+              from: "events",
+              localField: "eventId",
+              foreignField: "_id",
+              as: "event",
+            },
+          },
+
+          // Convert event array to object
+          {
+            $unwind: {
+              path: "$event",
+              preserveNullAndEmptyArrays: true,
+            },
+          },
+
+          // Select required fields
+          {
+            $project: {
+              _id: 1,
+              title: 1,
+              message: 1,
+              type: 1,
+              isRead: 1,
+              createdAt: 1,
+              updatedAt: 1,
+
+              createdBy: {
+                _id: "$createdBy._id",
+                name: "$createdBy.name",
+                email: "$createdBy.email",
+              },
+
+              event: {
+                _id: "$event._id",
+                title: "$event.title",
+                banner: "$event.banner",
+              },
+            },
+          },
+
+          // Latest notification first
+          {
+            $sort: {
+              createdAt: -1,
+            },
+          },
+        ]),
+        Notification.countDocuments({ userId: null, isRead: false }),
       ]);
 
       return res.status(HttpStatusCode.SUCCESS).json({
         success: true,
         count: notifications.length,
+        unreadCount,
         data: notifications,
       });
     } catch (error) {
       console.error("Get Notifications Error:", error);
+      return res.status(HttpStatusCode.SERVER_ERROR).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  // mark one admin-broadcast notification (event lifecycle) as read —
+  // the counterpart to TicketController.markNotificationRead, which
+  // handles the logged-in user's personal notifications instead
+  async markNotificationRead(req, res) {
+    try {
+      const { notificationId } = req.params;
+
+      const notification = await Notification.findOneAndUpdate(
+        { _id: notificationId, userId: null },
+        { $set: { isRead: true } },
+        { new: true },
+      );
+
+      if (!notification) {
+        return res.status(HttpStatusCode.NOT_FOUND).json({
+          success: false,
+          message: "Notification not found",
+        });
+      }
+
+      return res.status(HttpStatusCode.SUCCESS).json({
+        success: true,
+        data: notification,
+      });
+    } catch (error) {
+      console.error("Mark Notification Read Error:", error);
+
       return res.status(HttpStatusCode.SERVER_ERROR).json({
         success: false,
         message: error.message,
@@ -953,7 +1298,7 @@ class EventController {
     try {
       const { title, location, date } = req.query;
 
-      const matchStage = {};
+      const matchStage = { isDeleted: false };
 
       if (title) {
         matchStage.title = {
@@ -1035,10 +1380,12 @@ class EventController {
         },
       ]);
 
+      const enrichedEvents = await attachRatingsAndLikes(events);
+
       return res.status(HttpStatusCode.SUCCESS).json({
         success: true,
-        count: events.length,
-        data: events,
+        count: enrichedEvents.length,
+        data: enrichedEvents,
       });
     } catch (error) {
       console.error(error);
@@ -1073,6 +1420,7 @@ class EventController {
               $regex: `^${categoryName}$`,
               $options: "i",
             },
+            isDeleted: false,
           },
         },
         {
@@ -1113,11 +1461,13 @@ class EventController {
         },
       ]);
 
+      const enrichedEvents = await attachRatingsAndLikes(events);
+
       return res.status(HttpStatusCode.SUCCESS).json({
         success: true,
         message: "Events fetched successfully",
-        count: events.length,
-        data: events,
+        count: enrichedEvents.length,
+        data: enrichedEvents,
       });
     } catch (error) {
       return res.status(HttpStatusCode.SERVER_ERROR).json({
@@ -1164,6 +1514,7 @@ class EventController {
         {
           $match: {
             status: "active",
+            isDeleted: false,
           },
         },
 
@@ -1224,7 +1575,7 @@ class EventController {
         });
       }
 
-      const event = await Event.findById(eventId);
+      const event = await Event.findOne({ _id: eventId, isDeleted: false });
 
       if (!event) {
         return res.status(HttpStatusCode.NOT_FOUND).json({
@@ -1260,6 +1611,137 @@ class EventController {
       });
     } catch (error) {
       console.error("Toggle Event Error:", error);
+
+      return res.status(HttpStatusCode.SERVER_ERROR).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  // admin: toggle whether an event shows up in the homepage "Featured
+  // Events" rail
+  async toggleFeatured(req, res) {
+    try {
+      const { eventId } = req.params;
+
+      const event = await Event.findOne({ _id: eventId, isDeleted: false });
+
+      if (!event) {
+        return res.status(HttpStatusCode.NOT_FOUND).json({
+          success: false,
+          message: "Event not found",
+        });
+      }
+
+      event.isFeatured = !event.isFeatured;
+      await event.save();
+
+      return res.status(HttpStatusCode.SUCCESS).json({
+        success: true,
+        message: event.isFeatured
+          ? "Event marked as featured"
+          : "Event removed from featured",
+        data: event,
+      });
+    } catch (error) {
+      console.error("Toggle Featured Error:", error);
+
+      return res.status(HttpStatusCode.SERVER_ERROR).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  // PUBLIC — homepage "Featured Events" rail, admin-curated
+  async getFeaturedEvents(req, res) {
+    try {
+      const limit = Number(req.query.limit) || 8;
+
+      const events = await Event.find({
+        isDeleted: false,
+        status: "active",
+        isFeatured: true,
+      })
+        .sort({ date: 1 })
+        .limit(limit)
+        .select("title location date time banner price categoryId");
+
+      const enrichedEvents = await attachRatingsAndLikes(events);
+
+      return res.status(HttpStatusCode.SUCCESS).json({
+        success: true,
+        count: enrichedEvents.length,
+        data: enrichedEvents,
+      });
+    } catch (error) {
+      console.error("Get Featured Events Error:", error);
+
+      return res.status(HttpStatusCode.SERVER_ERROR).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  // PUBLIC — homepage "Popular Events" rail, ranked by tickets sold
+  // (unlike Featured, this isn't admin-curated — it's earned). Same
+  // ranking approach as analyticsController.getTopEvents, just without
+  // the admin gate.
+  async getPopularEvents(req, res) {
+    try {
+      const limit = Number(req.query.limit) || 8;
+
+      const events = await Ticket.aggregate([
+        { $match: { paymentStatus: "paid" } },
+        {
+          $group: {
+            _id: "$eventId",
+            ticketsSold: { $sum: 1 },
+          },
+        },
+        { $sort: { ticketsSold: -1 } },
+        {
+          $lookup: {
+            from: "events",
+            localField: "_id",
+            foreignField: "_id",
+            as: "event",
+          },
+        },
+        { $unwind: "$event" },
+        {
+          $match: {
+            "event.isDeleted": false,
+            "event.status": "active",
+          },
+        },
+        { $limit: limit },
+        {
+          $project: {
+            _id: "$event._id",
+            title: "$event.title",
+            location: "$event.location",
+            date: "$event.date",
+            time: "$event.time",
+            banner: "$event.banner",
+            price: "$event.price",
+            categoryId: "$event.categoryId",
+            ticketsSold: 1,
+          },
+        },
+      ]);
+
+      const enrichedEvents = await attachRatingsAndLikes(events);
+
+      return res.status(HttpStatusCode.SUCCESS).json({
+        success: true,
+        count: enrichedEvents.length,
+        data: enrichedEvents,
+      });
+    } catch (error) {
+      console.error("Get Popular Events Error:", error);
 
       return res.status(HttpStatusCode.SERVER_ERROR).json({
         success: false,

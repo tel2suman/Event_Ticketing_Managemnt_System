@@ -48,9 +48,16 @@ const ticketTierSchema = new mongoose.Schema(
       default: [],
     },
 
-    isActive: {
-      type: Boolean,
-      default: true,
+    // Optional sale window — when this tier is actually purchasable. Null
+    // on either end means "no restriction" (always on sale / no cutoff).
+    saleStart: {
+      type: Date,
+      default: null,
+    },
+
+    saleEnd: {
+      type: Date,
+      default: null,
     },
 
     // Assigned-seating support (opt-in per tier — a plain
