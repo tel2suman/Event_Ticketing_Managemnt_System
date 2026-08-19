@@ -17,6 +17,7 @@ const {
   verifyOrderSignature,
   verifyWebhookSignature,
 } = require("../../utils/razorpaySignature");
+const { refundAllTicketsForEvent } = require("../../utils/refundAllTicketsForEvent");
 
 // Releases stock back to a tier and marks a ticket as failed/cancelled.
 // Mirrors the rollback logic in ticketController.cancelTicket — kept as a
@@ -566,9 +567,9 @@ class PaymentController {
     try {
       const { eventId } = req.params;
 
-      const payments = await Payment.find({ eventId, status: "paid" });
+      const { refunded, failed, results } = await refundAllTicketsForEvent(eventId);
 
-      if (payments.length === 0) {
+      if (results.length === 0) {
         return res.status(HttpStatusCode.SUCCESS).json({
           success: true,
           message: "No paid orders found for this event — nothing to refund",
@@ -576,94 +577,9 @@ class PaymentController {
         });
       }
 
-      const results = [];
-
-      for (const payment of payments) {
-        try {
-          const allTickets = await Ticket.find({ orderId: payment.orderId });
-
-          const refundableTickets = allTickets.filter(
-            (ticket) => !ticket.checkedIn && ticket.refundedAmount === 0,
-          );
-
-          if (refundableTickets.length === 0) {
-            results.push({
-              orderId: payment.orderId,
-              status: "skipped",
-              reason: "No refundable tickets (already refunded or checked in)",
-            });
-            continue;
-          }
-
-          const refundAmount = refundableTickets.reduce(
-            (sum, ticket) => sum + ticket.priceAtPurchase,
-            0,
-          );
-
-          const refund = await razorpayInstance.payments.refund(
-            payment.razorpayPaymentId,
-            { amount: Math.round(refundAmount * 100) },
-          );
-
-          const refundedAt = new Date();
-
-          for (const ticket of refundableTickets) {
-            payment.refunds.push({
-              ticketId: ticket._id,
-              razorpayRefundId: refund.id,
-              amount: ticket.priceAtPurchase,
-              refundedAt,
-            });
-
-            ticket.refundedAmount = ticket.priceAtPurchase;
-            await releaseTicket(ticket);
-          }
-
-          const stillRefundable = await Ticket.exists({
-            orderId: payment.orderId,
-            checkedIn: false,
-            refundedAmount: 0,
-          });
-
-          payment.status = stillRefundable ? "paid" : "refunded";
-          payment.refundId = refund.id;
-          payment.refundedAt = refundedAt;
-          await payment.save();
-
-          notify({
-            userId: payment.userId,
-            eventId: payment.eventId,
-            type: "refund_processed",
-            title: "Event cancelled — refund processed",
-            message: `₹${refundAmount} has been refunded for booking ${payment.orderId} because the event was cancelled.`,
-          });
-
-          results.push({
-            orderId: payment.orderId,
-            status: "refunded",
-            amount: refundAmount,
-            ticketsRefunded: refundableTickets.length,
-          });
-        } catch (perPaymentError) {
-          console.error(
-            `Refund All For Event — order ${payment.orderId} failed:`,
-            perPaymentError.message,
-          );
-
-          results.push({
-            orderId: payment.orderId,
-            status: "failed",
-            reason: perPaymentError.message,
-          });
-        }
-      }
-
-      const refunded = results.filter((r) => r.status === "refunded").length;
-      const failed = results.filter((r) => r.status === "failed").length;
-
       return res.status(HttpStatusCode.SUCCESS).json({
         success: true,
-        message: `Processed ${payments.length} order(s) for this event: ${refunded} refunded, ${failed} failed`,
+        message: `Processed ${results.length} order(s) for this event: ${refunded} refunded, ${failed} failed`,
         data: { refunded, failed, results },
       });
     } catch (error) {

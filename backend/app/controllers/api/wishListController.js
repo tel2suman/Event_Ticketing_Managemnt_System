@@ -14,7 +14,7 @@ class WishListController {
     try {
       const { eventId } = req.body;
 
-      const event = await Event.findById(eventId);
+      const event = await Event.findOne({ _id: eventId, isDeleted: false });
 
       if (!event) {
         return res.status(HttpStatusCode.NOT_FOUND).json({

@@ -34,6 +34,14 @@ const userSchema = new mongoose.Schema(
       default: "",
     },
 
+    // Admin-controlled account status (activate/deactivate), distinct
+    // from `isDeleted` (soft-delete/trash) — feeds the Active/Inactive
+    // split on the admin "User Details" dashboard.
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+
     password: {
       type: String,
       required: function () {

@@ -22,6 +22,7 @@ class CouponController {
         validFrom,
         validUntil,
         usageLimit,
+        offerType,
       } = req.body;
 
       const existing = await Coupon.findOne({ code: code.toUpperCase().trim() });
@@ -43,6 +44,7 @@ class CouponController {
         validFrom: validFrom || Date.now(),
         validUntil,
         usageLimit: usageLimit ?? null,
+        offerType: offerType || "event",
         createdBy: req.user._id,
       });
 
@@ -186,6 +188,57 @@ class CouponController {
       });
     } catch (error) {
       console.error("Validate Coupon Error:", error);
+
+      return res.status(HttpStatusCode.SERVER_ERROR).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  // logged-in user: browse currently-redeemable offers — the "View all
+  // event offers" / "View all payment offers" lists on checkout. Unlike
+  // validateCoupon (which checks one code you already have), this lets a
+  // user discover what's available without knowing a code up front.
+  async getActiveOffers(req, res) {
+    try {
+      const { eventId, offerType } = req.query;
+      const now = new Date();
+
+      const filter = {
+        isActive: true,
+        validFrom: { $lte: now },
+        validUntil: { $gte: now },
+        $or: [
+          { usageLimit: null },
+          { $expr: { $lt: ["$usedCount", "$usageLimit"] } },
+        ],
+      };
+
+      if (offerType) {
+        filter.offerType = offerType;
+      }
+
+      // "event" offers are either platform-wide (eventId: null) or tied
+      // to the specific event being viewed; "payment" offers aren't
+      // event-scoped at all, so eventId is only applied when relevant.
+      if (eventId && (!offerType || offerType === "event")) {
+        filter.$and = [{ $or: [{ eventId: null }, { eventId }] }];
+      }
+
+      const offers = await Coupon.find(filter)
+        .select(
+          "code discountType discountValue maxDiscountAmount minOrderAmount eventId offerType validUntil",
+        )
+        .sort({ discountValue: -1 });
+
+      return res.status(HttpStatusCode.SUCCESS).json({
+        success: true,
+        count: offers.length,
+        data: offers,
+      });
+    } catch (error) {
+      console.error("Get Active Offers Error:", error);
 
       return res.status(HttpStatusCode.SERVER_ERROR).json({
         success: false,

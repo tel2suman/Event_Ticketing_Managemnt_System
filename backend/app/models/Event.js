@@ -143,10 +143,23 @@ const EventSchema = new mongoose.Schema(
       default: "active",
     },
 
+    // Admin-curated pick for the homepage "Featured Events" rail —
+    // distinct from "Popular Events", which is ranked by tickets sold
+    // instead (see eventController.getPopularEvents).
+    isFeatured: {
+      type: Boolean,
+      default: false,
+    },
+
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
+    },
+
+    isDeleted: {
+      type: Boolean,
+      default: false,
     },
   },
   {

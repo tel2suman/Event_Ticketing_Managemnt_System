@@ -120,6 +120,40 @@ router.get(
 );
 
 // ==============================
+// GET TICKETS BY ORDER ID (owner or admin) — powers the "Booking
+// Confirmed" screen right after payment
+// ==============================
+/**
+ * @swagger
+ * /api/v2/ticket/order/{orderId}:
+ *   get:
+ *     tags: [Ticket]
+ *     summary: Get every ticket in one order, with event/tier populated (owner or admin)
+ *     parameters:
+ *       - { name: orderId, in: path, required: true, schema: { type: string } }
+ *     responses:
+ *       200:
+ *         description: Tickets in this order
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 count: { type: integer }
+ *                 data:
+ *                   type: array
+ *                   items: { $ref: '#/components/schemas/Ticket' }
+ *       404: { $ref: '#/components/responses/NotFound' }
+ *       403: { $ref: '#/components/responses/Forbidden' }
+ */
+router.get(
+  "/order/:orderId",
+  AuthMiddleware,
+  TicketController.getTicketsByOrderId,
+);
+
+// ==============================
 // CANCEL TICKET (owner only, before check-in)
 // ==============================
 /**

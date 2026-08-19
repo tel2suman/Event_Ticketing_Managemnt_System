@@ -43,6 +43,17 @@ const couponSchema = new mongoose.Schema(
       default: null,
     },
 
+    // Which "View all ___ offers" list this shows up in on checkout —
+    // "event" offers are tied to (or platform-wide across) events;
+    // "payment" offers are meant for payment-method-tied promos (e.g.
+    // "10% off with HDFC cards"). Purely a display/categorization
+    // dimension — redemption logic (applyCoupon) treats both the same.
+    offerType: {
+      type: String,
+      enum: ["event", "payment"],
+      default: "event",
+    },
+
     validFrom: {
       type: Date,
       default: Date.now,

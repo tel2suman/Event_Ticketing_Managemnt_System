@@ -1,9 +1,11 @@
 const Joi = require("joi");
 
-const refundPolicyOverrideItem = Joi.object({
-  minHoursBeforeEvent: Joi.number().min(0).required(),
-  percentage: Joi.number().min(0).max(100).required(),
-});
+// Only used by the commented-out refundPolicyOverride fields below — not
+// in the current create/update Ticket Tier forms.
+// const refundPolicyOverrideItem = Joi.object({
+//   minHoursBeforeEvent: Joi.number().min(0).required(),
+//   percentage: Joi.number().min(0).max(100).required(),
+// });
 
 // createTicketTier validation
 const createTicketTierValidation = Joi.object({
@@ -47,11 +49,11 @@ const createTicketTierValidation = Joi.object({
       "any.required": "Available quantity is required",
     }),
 
-  benefits: Joi.array().items(Joi.string().trim()).default([]).messages({
-    "array.base": "Benefits must be a list of strings",
-  }),
-
-  isActive: Joi.boolean().default(true),
+  // benefits — not in the current "Add Ticket Tier" form, commented out
+  // until the UI adds it back.
+  // benefits: Joi.array().items(Joi.string().trim()).default([]).messages({
+  //   "array.base": "Benefits must be a list of strings",
+  // }),
 
   hasAssignedSeating: Joi.boolean().default(false),
 
@@ -67,7 +69,17 @@ const createTicketTierValidation = Joi.object({
       "any.required": "seatLabels is required when hasAssignedSeating is true",
     }),
 
-  refundPolicyOverride: Joi.array().items(refundPolicyOverrideItem).default([]),
+  // refundPolicyOverride — not in the current "Add Ticket Tier" form,
+  // commented out until the UI adds it back.
+  // refundPolicyOverride: Joi.array().items(refundPolicyOverrideItem).default([]),
+
+  saleStart: Joi.date().iso().optional().allow(null).messages({
+    "date.base": "Invalid sale start date",
+  }),
+
+  saleEnd: Joi.date().iso().optional().allow(null).messages({
+    "date.base": "Invalid sale end date",
+  }),
 });
 
 // updateTicketTier validation
@@ -86,18 +98,27 @@ const updateTicketTierValidation = Joi.object({
     "string.max": "Description cannot exceed 150 characters",
   }),
 
-  quantityAvailable: Joi.number().integer().min(0).messages({
-    "number.base": "Available quantity must be a number",
-    "number.min": "Available quantity cannot be negative",
+  // quantityAvailable, benefits, refundPolicyOverride — not in the current
+  // "Update Ticket Tier" form (no Capacity/benefits/refund section),
+  // commented out until the UI adds them back.
+  // quantityAvailable: Joi.number().integer().min(0).messages({
+  //   "number.base": "Available quantity must be a number",
+  //   "number.min": "Available quantity cannot be negative",
+  // }),
+
+  // benefits: Joi.array().items(Joi.string().trim()).messages({
+  //   "array.base": "Benefits must be a list of strings",
+  // }),
+
+  // refundPolicyOverride: Joi.array().items(refundPolicyOverrideItem),
+
+  saleStart: Joi.date().iso().allow(null).messages({
+    "date.base": "Invalid sale start date",
   }),
 
-  benefits: Joi.array().items(Joi.string().trim()).messages({
-    "array.base": "Benefits must be a list of strings",
+  saleEnd: Joi.date().iso().allow(null).messages({
+    "date.base": "Invalid sale end date",
   }),
-
-  isActive: Joi.boolean(),
-
-  refundPolicyOverride: Joi.array().items(refundPolicyOverrideItem),
 });
 
 module.exports = {
