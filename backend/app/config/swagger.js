@@ -54,7 +54,7 @@ const swaggerDefinition = {
     {
       name: "Speaker",
       description:
-        "Inspiring Motivational Speakers at the stage, who will give lectures before / after the event",
+        "Inspiring Motivational speaker at the stage, who will give lectures before / after the event",
     },
     {
       name: "Ticket",
@@ -496,7 +496,7 @@ const swaggerDefinition = {
           },
         },
       },
-      
+
       Ticket: {
         type: "object",
         properties: {

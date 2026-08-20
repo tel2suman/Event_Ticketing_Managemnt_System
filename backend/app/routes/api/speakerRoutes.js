@@ -24,7 +24,7 @@ const router = express.Router();
  *     summary: Create a new speaker
  *     description: Create a speaker with lecture details, speaker information, social media links, and speaker image.
  *     tags:
- *       - Speakers
+ *       - Speaker
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -125,7 +125,7 @@ router.post(
  *     summary: Get all speakers
  *     description: Get speakers with optional name search, lecture date filtering, and pagination.
  *     tags:
- *       - Speakers
+ *       - Speaker
  *     parameters:
  *       - in: query
  *         name: name
@@ -214,7 +214,7 @@ router.get(
  *     summary: Get speaker by ID
  *     description: Get complete details of a single speaker.
  *     tags:
- *       - Speakers
+ *       - Speaker
  *     parameters:
  *       - in: path
  *         name: speakerId
@@ -259,7 +259,7 @@ router.get(
  *     summary: Update speaker
  *     description: Update any single speaker field, multiple fields, or replace the speaker image.
  *     tags:
- *       - Speakers
+ *       - Speaker
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -362,7 +362,7 @@ router.put(
  *     summary: Delete speaker
  *     description: Delete a speaker and remove the associated speaker image from Cloudinary.
  *     tags:
- *       - Speakers
+ *       - Speaker
  *     security:
  *       - bearerAuth: []
  *     parameters:
