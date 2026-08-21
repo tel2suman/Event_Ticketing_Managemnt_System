@@ -36,10 +36,16 @@ const paymentRoutes = require("./paymentRoutes");
 const analyticsRoutes = require("./analyticsRoutes");
 
 const couponRoutes = require("./couponRoutes");
+const commentRouter = require("./commentRoutes");
+const blogLikeRouter = require("./blogLikeRoutes");
 
 router.use("/api/v1/auth", authRoutes);
 
 router.use("/api/v1/blog", blogRouter);
+
+router.use("/api/v1/comments", commentRouter);
+
+router.use("/api/v1/blog-like", blogLikeRouter);
 
 router.use("/api/v1/contact", contactRoutes);
 
