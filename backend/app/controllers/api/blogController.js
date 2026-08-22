@@ -13,17 +13,168 @@ const Category = require("../../models/Category");
 class BlogController {
   // CREATE BLOG
 
+  // async createBlog(req, res) {
+  //   try {
+  //     const { error, value } = createBlogValidation.validate(req.body);
+
+  //     if (error) {
+  //       return res.status(HttpStatusCode.BAD_REQUEST).json({
+  //         success: false,
+  //         message: error.details[0].message,
+  //       });
+  //     }
+
+  //     const {
+  //       title,
+  //       excerpt,
+  //       content,
+  //       category,
+  //       tags,
+  //       author,
+  //       status,
+  //       publishDate,
+  //       slug,
+  //       metaTitle,
+  //       metaDescription,
+  //     } = value;
+
+  //     // Check duplicate title
+  //     const existingTitle = await blogModel.findOne({
+  //       title,
+  //       isDeleted: false,
+  //     });
+
+  //     if (existingTitle) {
+  //       return res.status(HttpStatusCode.CONFLICT).json({
+  //         success: false,
+  //         message: "Blog title already exists.",
+  //       });
+  //     }
+
+  //     // Check duplicate slug
+  //     const existingSlug = await blogModel.findOne({
+  //       slug,
+  //       isDeleted: false,
+  //     });
+
+  //     if (existingSlug) {
+  //       return res.status(HttpStatusCode.CONFLICT).json({
+  //         success: false,
+  //         message: "Blog slug already exists.",
+  //       });
+  //     }
+
+  //     // Validate category ObjectId
+  //     if (!mongoose.Types.ObjectId.isValid(category)) {
+  //       return res.status(HttpStatusCode.BAD_REQUEST).json({
+  //         success: false,
+  //         message: "Invalid category ID.",
+  //       });
+  //     }
+
+  //     // Check category exists and is active
+  //     const categoryExists = await Category.findOne({
+  //       _id: category,
+  //       isActive: true,
+  //     });
+
+  //     if (!categoryExists) {
+  //       return res.status(HttpStatusCode.NOT_FOUND).json({
+  //         success: false,
+  //         message: "Category not found or inactive.",
+  //       });
+  //     }
+
+  //     // Scheduled blog must have publish date
+  //     if (status === "Scheduled" && !publishDate) {
+  //       return res.status(HttpStatusCode.BAD_REQUEST).json({
+  //         success: false,
+  //         message: "Publish date is required for scheduled blog.",
+  //       });
+  //     }
+
+  //     // Scheduled date must be in future
+  //     if (status === "Scheduled" && publishDate) {
+  //       if (new Date(publishDate) <= new Date()) {
+  //         return res.status(HttpStatusCode.BAD_REQUEST).json({
+  //           success: false,
+  //           message: "Scheduled publish date must be in the future.",
+  //         });
+  //       }
+  //     }
+
+  //     // Published blog gets current date
+  //     let finalPublishDate = publishDate;
+
+  //     if (status === "Published" && !finalPublishDate) {
+  //       finalPublishDate = new Date();
+  //     }
+
+  //     const blog = new blogModel({
+  //       title,
+  //       excerpt,
+  //       content,
+  //       category,
+  //       tags: tags || [],
+  //       author,
+  //       status: status || "Draft",
+  //       publishDate: finalPublishDate,
+  //       slug,
+  //       metaTitle,
+  //       metaDescription,
+  //     });
+
+  //     // Featured image
+  //     if (req.file) {
+  //       blog.featuredImage = {
+  //         url: req.file.path,
+  //         public_id: req.file.filename,
+  //       };
+  //     }
+
+  //     await blog.save();
+
+  //     // Fetch newly created blog using aggregation + lookup
+  //     const createdBlog = await blogModel.aggregate([
+  //       {
+  //         $match: {
+  //           _id: blog._id,
+  //           isDeleted: false,
+  //         },
+  //       },
+
+  //       {
+  //         $lookup: {
+  //           from: "categories",
+  //           localField: "category",
+  //           foreignField: "_id",
+  //           as: "category",
+  //         },
+  //       },
+
+  //       {
+  //         $unwind: {
+  //           path: "$category",
+  //           preserveNullAndEmptyArrays: true,
+  //         },
+  //       },
+  //     ]);
+
+  //     return res.status(HttpStatusCode.CREATED).json({
+  //       success: true,
+  //       message: "Blog created successfully.",
+  //       data: createdBlog[0],
+  //     });
+  //   } catch (error) {
+  //     return res.status(HttpStatusCode.SERVER_ERROR).json({
+  //       success: false,
+  //       message: error.message,
+  //     });
+  //   }
+  // }
+
   async createBlog(req, res) {
     try {
-      const { error, value } = createBlogValidation.validate(req.body);
-
-      if (error) {
-        return res.status(HttpStatusCode.BAD_REQUEST).json({
-          success: false,
-          message: error.details[0].message,
-        });
-      }
-
       const {
         title,
         excerpt,
@@ -36,7 +187,7 @@ class BlogController {
         slug,
         metaTitle,
         metaDescription,
-      } = value;
+      } = req.body;
 
       // Check duplicate title
       const existingTitle = await blogModel.findOne({
@@ -134,7 +285,6 @@ class BlogController {
 
       await blog.save();
 
-      // Fetch newly created blog using aggregation + lookup
       const createdBlog = await blogModel.aggregate([
         {
           $match: {
@@ -142,7 +292,6 @@ class BlogController {
             isDeleted: false,
           },
         },
-
         {
           $lookup: {
             from: "categories",
@@ -151,7 +300,6 @@ class BlogController {
             as: "category",
           },
         },
-
         {
           $unwind: {
             path: "$category",

@@ -116,8 +116,8 @@ const blogRouter = express.Router();
  */
 blogRouter.post(
   "/",
-  AuthMiddleware,
-  RoleMiddleware("admin"),
+  //AuthMiddleware,
+  //RoleMiddleware("admin"),
   Upload.single("featuredImage"),
   blogController.createBlog,
 );
@@ -143,8 +143,8 @@ blogRouter.post(
  */
 blogRouter.get(
   "/",
-  AuthMiddleware,
-  RoleMiddleware("admin"),
+  //AuthMiddleware,
+  //RoleMiddleware("admin"),
   blogController.getBlogs,
 );
 
@@ -216,8 +216,8 @@ blogRouter.get("/slug/:slug", AuthMiddleware, blogController.getBlogBySlug);
  */
 blogRouter.get(
   "/trash",
-  AuthMiddleware,
-  RoleMiddleware("admin"),
+  //AuthMiddleware,
+  //RoleMiddleware("admin"),
   blogController.trashBlogs,
 );
 
@@ -343,8 +343,8 @@ blogRouter.get("/:id", AuthMiddleware, blogController.getBlogById);
  */
 blogRouter.put(
   "/:id",
-  AuthMiddleware,
-  RoleMiddleware("admin"),
+  //AuthMiddleware,
+  //RoleMiddleware("admin"),
   Upload.single("featuredImage"),
   blogController.updateBlog,
 );
@@ -375,8 +375,8 @@ blogRouter.put(
  */
 blogRouter.patch(
   "/draft/:id",
-  AuthMiddleware,
-  RoleMiddleware("admin"),
+  //AuthMiddleware,
+  //RoleMiddleware("admin"),
   blogController.saveAsDraft,
 );
 
@@ -406,8 +406,8 @@ blogRouter.patch(
  */
 blogRouter.patch(
   "/publish/:id",
-  AuthMiddleware,
-  RoleMiddleware("admin"),
+  //AuthMiddleware,
+  //RoleMiddleware("admin"),
   blogController.publishBlog,
 );
 
@@ -453,8 +453,8 @@ blogRouter.patch(
  */
 blogRouter.patch(
   "/schedule/:id",
-  AuthMiddleware,
-  RoleMiddleware("admin"),
+  //AuthMiddleware,
+  //RoleMiddleware("admin"),
   blogController.scheduleBlog,
 );
 
@@ -484,8 +484,8 @@ blogRouter.patch(
  */
 blogRouter.delete(
   "/:id",
-  AuthMiddleware,
-  RoleMiddleware("admin"),
+  //AuthMiddleware,
+  //RoleMiddleware("admin"),
   blogController.deleteBlog,
 );
 
@@ -515,8 +515,8 @@ blogRouter.delete(
  */
 blogRouter.patch(
   "/restore/:id",
-  AuthMiddleware,
-  RoleMiddleware("admin"),
+  //AuthMiddleware,
+  //RoleMiddleware("admin"),
   blogController.restoreBlog,
 );
 
@@ -546,8 +546,8 @@ blogRouter.patch(
  */
 blogRouter.delete(
   "/permanent-delete/:id",
-  RoleMiddleware("admin"),
-  AuthMiddleware,
+  //RoleMiddleware("admin"),
+  //AuthMiddleware,
   blogController.permanentDelete,
 );
 
